@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1692ff0eee7c6dc4fb1fd9507e4a1a38, type: 3}
+  m_Name: Setting
+  m_EditorClassIdentifier: 
+  level: 1
+  score: 0
+  showHints: 1
+  skinOrdinal: 1
+  tileSprites:
+  - {fileID: 21300000, guid: 84a0206a45aab0c468ad1a70d36203cc, type: 3}
+  - {fileID: 21300000, guid: 89dfc771171c2d04ba04fa2d387ac517, type: 3}
+  - {fileID: 21300000, guid: 818e559dd866e9342afc6905d0c0acf3, type: 3}
+  - {fileID: 21300000, guid: c07810ba6dbb7c1438bd9d8a5fab4475, type: 3}
+  - {fileID: 21300000, guid: 0a180eedd2ef61a47aa7482ceff545c5, type: 3}
+  tokenSprites:
+  - {fileID: 21300000, guid: f996564bd18e0e54db895faead62c768, type: 3}
+  - {fileID: 21300000, guid: ad51e818c5c222b42bd073500db7a8be, type: 3}
+  - {fileID: 21300000, guid: df7010c3a15db0c4685be216898c6047, type: 3}
+  - {fileID: 21300000, guid: 4f794271b9f1aae48bbfcae1528926ad, type: 3}
+  - {fileID: 21300000, guid: 970c4a8a8135a784ea8d181e7710749b, type: 3}
