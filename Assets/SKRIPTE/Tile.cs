@@ -93,8 +93,9 @@ public class Tile : MonoBehaviour, IBeginDragHandler, IDragHandler, IPointerClic
 
         Vector2Int oppositePosition = gm.OppositePos(_moveDir, Pozicija);
         
-        gm.MoveTokenByPosition(-_moveDir, oppositePosition); 
+        gm.MoveTokenByPosition(-_moveDir, oppositePosition);
 
+        gm.HandleMoveFinished();
     }
 
     public void OnDrag(PointerEventData eventData)
@@ -106,5 +107,6 @@ public class Tile : MonoBehaviour, IBeginDragHandler, IDragHandler, IPointerClic
     {
         if (allowedDirection != AllowedDirection.MiddlePoint) return;
         gm.MiddlePointActivation(new Vector2Int(1,1));
+        gm.HandleMoveFinished();
     }
 }

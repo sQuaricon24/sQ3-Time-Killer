@@ -28,3 +28,44 @@ MonoBehaviour:
   - {fileID: 21300000, guid: df7010c3a15db0c4685be216898c6047, type: 3}
   - {fileID: 21300000, guid: 4f794271b9f1aae48bbfcae1528926ad, type: 3}
   - {fileID: 21300000, guid: 970c4a8a8135a784ea8d181e7710749b, type: 3}
+  positionsPerLevel:
+  - levelIndex: 0
+    positionValue: 21
+  - levelIndex: 1
+    positionValue: 3
+  - levelIndex: 2
+    positionValue: 8
+  - levelIndex: 3
+    positionValue: 4
+  - levelIndex: 4
+    positionValue: 12
+  - levelIndex: 5
+    positionValue: 21
+  - levelIndex: 6
+    positionValue: 4
+  - levelIndex: 7
+    positionValue: 3
+  - levelIndex: 8
+    positionValue: 12
+  - levelIndex: 9
+    positionValue: 8
+  - levelIndex: 10
+    positionValue: 21
+  - levelIndex: 11
+    positionValue: 8
+  - levelIndex: 12
+    positionValue: 12
+  - levelIndex: 13
+    positionValue: 3
+  - levelIndex: 14
+    positionValue: 4
+  - levelIndex: 15
+    positionValue: 21
+  - levelIndex: 16
+    positionValue: 12
+  - levelIndex: 17
+    positionValue: 4
+  - levelIndex: 18
+    positionValue: 8
+  - levelIndex: 19
+    positionValue: 3

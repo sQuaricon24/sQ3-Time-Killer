@@ -16,10 +16,10 @@ public class MainMenuManager : MonoBehaviour
     [SerializeField] Transform parEffects;
     UITransitionEffect[] effects;
     [SerializeField] Button btnPlay;
-    
+
     private void Start()
     {
-        setting.level = 1;
+        setting.level = 0;
         setting.score = 0;
         StartCoroutine(IntroSequence());
     }

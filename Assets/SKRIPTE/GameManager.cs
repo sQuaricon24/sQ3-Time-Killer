@@ -25,6 +25,11 @@ public class GameManager : MonoBehaviour
     [SerializeField] Button[] btnLevelDone;
     [SerializeField] Button btnSkin, btnHint;
 
+    [SerializeField] GameObject goodMoveMarker;
+    [SerializeField] GameObject wrongMoveMarker;
+    [SerializeField] List<int> mowesToWinList;
+
+
     bool _levelDone;
     int _skinCounter;
     const int CONST_SKINMAX = 4; //number of skin folders in Resources folder
@@ -41,6 +46,9 @@ public class GameManager : MonoBehaviour
     Tile[] _replaceTiles; //used for animation only
     int _moveTokenEvenCounter; //token are moved twice per player action. Some values shouldn't be updated twice and this bool makes sure of that.
 
+    private int currentMovesToWin = -1;
+    private int currentPositionIndex = -1;
+    private int previousPositionIndex = -1;
     #region//TWEENS
     [SerializeField] Ease izy;
     const float CONST_TWEENDURATION = 1f;
@@ -143,6 +151,11 @@ public class GameManager : MonoBehaviour
     {
         ResetAllHints();
         _tweenFinishedCounter = 100;
+        setting.level += 1;
+
+        if (setting.level > 19)
+            setting.level = 0;
+
         levelDoneGO.SetActive(true);
         btnLevelDone[0].gameObject.SetActive(true);
         btnLevelDone[1].gameObject.SetActive(true);
@@ -183,13 +196,97 @@ public class GameManager : MonoBehaviour
 
         IniDic();
 
-        int newLevel = RandomLevel(setting.level);
-        _tokens[1, 0].Vrijednost = _tokens[1, 2].Vrijednost = _allCombinations[newLevel][0];
-        _tokens[2, 0].Vrijednost = _tokens[0, 2].Vrijednost = _allCombinations[newLevel][1];
-        _tokens[0, 0].Vrijednost = _tokens[2, 2].Vrijednost = _allCombinations[newLevel][2];
-        _tokens[0, 1].Vrijednost = _tokens[2, 1].Vrijednost = _allCombinations[newLevel][3];
+        // current position from 23 possible positions
+        currentPositionIndex = setting.GetPositionForLevel(setting.level);
+
+        _tokens[1, 0].Vrijednost = _tokens[1, 2].Vrijednost = _allCombinations[currentPositionIndex][0];
+        _tokens[2, 0].Vrijednost = _tokens[0, 2].Vrijednost = _allCombinations[currentPositionIndex][1];
+        _tokens[0, 0].Vrijednost = _tokens[2, 2].Vrijednost = _allCombinations[currentPositionIndex][2];
+        _tokens[0, 1].Vrijednost = _tokens[2, 1].Vrijednost = _allCombinations[currentPositionIndex][3];
+        currentMovesToWin = GetMovesToWinForPositionIndex(currentPositionIndex);
         InitializationHint();
     }
+
+    private int GetPositionIndexFromCurrentVrijednost()
+    {
+        for(int i = 0; i < _allCombinations.Count; i++)
+        {
+            if(_tokens[1, 0].Vrijednost == _allCombinations[i][0] &&
+               _tokens[2, 0].Vrijednost == _allCombinations[i][1] &&
+               _tokens[0, 0].Vrijednost == _allCombinations[i][2] &&
+               _tokens[0, 1].Vrijednost == _allCombinations[i][3])
+            {
+                return i;
+            }
+        }
+
+        Debug.LogError("GetPositionIndexFromCurrentVrijednost returning invalid index -1");
+        return -1;
+    }
+
+    private int GetMovesToWinForPositionIndex(int positionIndex)
+    {
+        return mowesToWinList[positionIndex];
+    }
+
+    public void HandleMoveFinished()
+    {
+        int newPosition = GetPositionIndexFromCurrentVrijednost();
+        int newMovesToWin = GetMovesToWinForPositionIndex(newPosition);
+
+        previousPositionIndex = currentPositionIndex;
+        currentPositionIndex = newPosition;
+
+        DebugCurrentAndPreviousPosition();
+
+        goodMoveMarker.gameObject.SetActive(false);
+        wrongMoveMarker.gameObject.SetActive(false);
+        if (newMovesToWin < currentMovesToWin)
+            StartCoroutine(ShowMarkerThenHideItAfterSeconds(goodMoveMarker, 3f));
+        else
+            StartCoroutine(ShowMarkerThenHideItAfterSeconds(wrongMoveMarker, 3f));
+
+        currentMovesToWin = newMovesToWin;
+
+    }
+
+    private void DebugCurrentAndPreviousPosition()
+    {
+        _tokens[1, 0].Vrijednost = _tokens[1, 2].Vrijednost = _allCombinations[currentPositionIndex][0];
+        _tokens[2, 0].Vrijednost = _tokens[0, 2].Vrijednost = _allCombinations[currentPositionIndex][1];
+        _tokens[0, 0].Vrijednost = _tokens[2, 2].Vrijednost = _allCombinations[currentPositionIndex][2];
+        _tokens[0, 1].Vrijednost = _tokens[2, 1].Vrijednost = _allCombinations[currentPositionIndex][3];
+
+        Debug.LogError("PREV POS INDEX " + previousPositionIndex);
+        if(previousPositionIndex >= 0)
+        {
+            DebugPositionIndex(previousPositionIndex);
+        }
+        Debug.LogError("CURRENT POS INDEX " + currentPositionIndex);
+        if (currentPositionIndex >= 0)
+        {
+            DebugPositionIndex(currentPositionIndex);
+        }
+    }
+
+    private void DebugPositionIndex(int positionIndex)
+    {
+        Debug.LogError("{" + _allCombinations[positionIndex][0] + "," 
+                           + _allCombinations[positionIndex][1] + ","
+                           + _allCombinations[positionIndex][2] + ","
+                           + _allCombinations[positionIndex][3] + "}");
+
+        Debug.LogError("MOVES TO WIN: " + mowesToWinList[positionIndex]);
+    }
+
+    private IEnumerator ShowMarkerThenHideItAfterSeconds(GameObject markerObject, float seconds)
+    {
+        yield return new WaitForSeconds(0.2f);
+        markerObject.SetActive(true);
+        yield return new WaitForSeconds(seconds);
+        markerObject.SetActive(false);
+    }
+
     /// <summary>
     /// Changes skin. Loads them from RESOURCES folder. Name of each folder that holds skin should be Skin0x, where 0x is number of skin.
     /// </summary>
@@ -297,6 +394,7 @@ public class GameManager : MonoBehaviour
     }
     void IniDic()
     {
+        _allCombinations.Add(lay0);
         _allCombinations.Add(lay1);
         _allCombinations.Add(lay2);
         _allCombinations.Add(lay3);
@@ -320,7 +418,7 @@ public class GameManager : MonoBehaviour
         _allCombinations.Add(lay21);
         _allCombinations.Add(lay22);
         _allCombinations.Add(lay23);
-        _allCombinations.Add(lay0);
+
 
         _mainPairs.Add(lay0, layNull);
         _mainPairs.Add(lay1, lay15);
@@ -535,6 +633,7 @@ public class GameManager : MonoBehaviour
         ResetAllHints();
         _moveTokenEvenCounter = (1 + _moveTokenEvenCounter) % 2;
     }
+
     public Vector2Int OppositePos(Vector2Int moveDirection, Vector2Int currentPosition)
     {
         Vector2Int v2Int = Vector2Int.zero;
@@ -604,6 +703,7 @@ public class GameManager : MonoBehaviour
             .From(_rectPosition[poz.x + 1, smaller.y + 1])
             .SetEase(izy);
     }
+
     Vector2Int LimitVectorInt(Vector2Int v2Int)
     {
         Vector2Int vToLimit = v2Int;
