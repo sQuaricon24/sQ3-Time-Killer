@@ -21,6 +21,9 @@ public class MainMenuManager : MonoBehaviour
     {
         setting.level = 0;
         setting.score = 0;
+        setting.goodMoveStreak = 0;
+        setting.xp = PlayerPrefs.GetInt("XP", 0);
+        setting.LoadSecondAndThirdPhasePositions();
         StartCoroutine(IntroSequence());
     }
 

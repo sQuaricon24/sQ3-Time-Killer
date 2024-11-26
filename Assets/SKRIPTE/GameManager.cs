@@ -10,6 +10,8 @@ using System.Linq;
 
 public class GameManager : MonoBehaviour
 {
+    [SerializeField] private TextMeshProUGUI scoreText;
+    [SerializeField] private TextMeshProUGUI xpText;
     public static GameManager gm;
     public SoSetting setting;
 
@@ -127,9 +129,12 @@ public class GameManager : MonoBehaviour
     {
         NewGameBoard();
     }
+
     #region//EVENTS, BUTTONS
     private void OnEnable()
     {
+        scoreText.text = setting.score.ToString();
+        xpText.text = setting.xp.ToString();
         HelperScript.LevelFinished += Ev_LevelDone;
         btnLevelDone[0].onClick.AddListener(Btn_NextLevel);
         btnLevelDone[1].onClick.AddListener(Btn_MainMenu);
@@ -153,8 +158,13 @@ public class GameManager : MonoBehaviour
         _tweenFinishedCounter = 100;
         setting.level += 1;
 
-        if (setting.level > 19)
+        if (setting.level > 19 && setting.score < setting.firstPhaseScore ||
+            setting.level > 99 && setting.score < setting.secondPhaseScore ||
+            setting.level > 252 && setting.score > setting.secondPhaseScore)
+        {
             setting.level = 0;
+        }
+
 
         levelDoneGO.SetActive(true);
         btnLevelDone[0].gameObject.SetActive(true);
@@ -197,7 +207,7 @@ public class GameManager : MonoBehaviour
         IniDic();
 
         // current position from 23 possible positions
-        currentPositionIndex = setting.GetPositionForLevel(setting.level);
+        currentPositionIndex = setting.GetPositionForLevelAndScore(setting.level,setting.score);
 
         _tokens[1, 0].Vrijednost = _tokens[1, 2].Vrijednost = _allCombinations[currentPositionIndex][0];
         _tokens[2, 0].Vrijednost = _tokens[0, 2].Vrijednost = _allCombinations[currentPositionIndex][1];
@@ -237,17 +247,71 @@ public class GameManager : MonoBehaviour
         previousPositionIndex = currentPositionIndex;
         currentPositionIndex = newPosition;
 
-        DebugCurrentAndPreviousPosition();
+        //DebugCurrentAndPreviousPosition();
 
         goodMoveMarker.gameObject.SetActive(false);
         wrongMoveMarker.gameObject.SetActive(false);
         if (newMovesToWin < currentMovesToWin)
+        {
+            setting.goodMoveStreak++;
+            setting.xp += GetXpForWinStreak(setting.goodMoveStreak);
+            setting.AddScore(GetScoreForWinStreak(setting.goodMoveStreak));
+            PlayerPrefs.SetInt("XP", setting.xp);
+            scoreText.text = setting.score.ToString();
+            xpText.text = setting.xp.ToString();
+            //Debug.LogError("Score is now: " + setting.score);
+
             StartCoroutine(ShowMarkerThenHideItAfterSeconds(goodMoveMarker, 3f));
+        }
         else
+        {
+            setting.goodMoveStreak = 0;
             StartCoroutine(ShowMarkerThenHideItAfterSeconds(wrongMoveMarker, 3f));
+        }
 
         currentMovesToWin = newMovesToWin;
+    }
 
+    private int GetScoreForWinStreak(int streak)
+    {
+        switch(streak)
+        {
+            case (0):
+                return 0;
+            case (1):
+                return 0;
+            case (2):
+                return 10;
+            case (3):
+                return 20;
+            case (4):
+                return 40;
+            case (5):
+                return 80;
+            default:
+                return 80;
+        }
+    }
+
+    private int GetXpForWinStreak(int streak)
+    {
+        switch (streak)
+        {
+            case (0):
+                return 0;
+            case (1):
+                return 5;
+            case (2):
+                return 10;
+            case (3):
+                return 20;
+            case (4):
+                return 40;
+            case (5):
+                return 80;
+            default:
+                return 80;
+        }
     }
 
     private void DebugCurrentAndPreviousPosition()
@@ -734,6 +798,19 @@ public class GameManager : MonoBehaviour
 
     }
     #endregion
+
+    private void OnApplicationPause(bool pauseStatus)
+    {
+        if (pauseStatus)
+        {
+            PlayerPrefs.Save(); // Save when the app is paused
+        }
+    }
+
+    private void OnApplicationQuit()
+    {
+        PlayerPrefs.Save(); // Save when the app is closing
+    }
 }
 
 
