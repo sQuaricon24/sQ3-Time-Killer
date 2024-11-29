@@ -14,9 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   firstPhaseScore: 400
   secondPhaseScore: 800
-  level: 10
-  goodMoveStreak: 3
-  score: 1830
+  level: 6
+  goodMoveStreak: 0
+  score: 0
+  xp: 0
   showHints: 1
   skinOrdinal: 1
   tileSprites:

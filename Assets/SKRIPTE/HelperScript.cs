@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -7,11 +6,7 @@ namespace FirstCollection
 {
     public class HelperScript 
     {
-        public static System.Action<int> LevelFinished;
-        public static System.Action SkinUpdated;
-
-
-        public static Vector3 MousePoz(Camera cam, LayerMask lay)
+       public static Vector3 MousePoz(Camera cam, LayerMask lay)
         {
             Ray ray = cam.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
@@ -56,30 +51,6 @@ namespace FirstCollection
 
             return list;
         }
-
-
     }
-    public enum MainType
-    {
-        Tile,
-        Token
-    }
-    public enum AllowedDirection
-    {
-        All,
-        Horizontal,
-        Vertical,
-        MiddlePoint
-    }
-    public enum HintDirection
-    {
-        UpSwipe,
-        RightSwipe,
-        DownSwipe,
-        LeftSwipe,
-        YYdoubleTap,
-        None
-    }
-
 }
 

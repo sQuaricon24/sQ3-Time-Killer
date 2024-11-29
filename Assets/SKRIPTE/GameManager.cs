@@ -1,198 +1,85 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using FirstCollection;
-using TMPro;
 using DG.Tweening;
 using UnityEngine.SceneManagement;
 using System.Linq;
 
-public class GameManager : MonoBehaviour
+public partial class GameManager : MonoBehaviour
 {
-    [SerializeField] private Button btnBack;
-    [SerializeField] private TextMeshProUGUI scoreText;
-    [SerializeField] private TextMeshProUGUI xpText;
-    public static GameManager gm;
-    public SoSetting setting;
+    private const float CONST_TWEENDURATION = 1f;
 
-    #region//TEMPORARY, only to demonstrate skin color (no functionality)
-    [SerializeField] Color[] skinColors;
-    [SerializeField] Image[] imageToColorSkin;
-    [SerializeField] TextMeshProUGUI textToColorSkin;
-    #endregion
+    public static GameManager Instance;
 
+    [SerializeField] public SoSetting settings;
     [SerializeField] Transform kanvas;
-    [SerializeField] Transform parTile, parToken, parPositions, parTileReplace, parTokenReplace, parHintElements;
-    [SerializeField] GameObject levelDoneGO;
-    [SerializeField] Button[] btnLevelDone;
-    [SerializeField] Button btnSkin, btnHint;
+    [SerializeField] Transform parTile, parToken, parPositions, parTileReplace, parTokenReplace;
+    [SerializeField] List<int> movesToWinList;
+    [SerializeField] private Ease easingType;
 
-    [SerializeField] GameObject goodMoveMarker;
-    [SerializeField] GameObject wrongMoveMarker;
-    [SerializeField] List<int> mowesToWinList;
-
-
-    bool _levelDone;
-    int _skinCounter;
-    const int CONST_SKINMAX = 4; //number of skin folders in Resources folder
-    int _roundCounter;
-
-    Tile[,] _tiles = new Tile[3, 3];
-    Transform[,] _tileTransform = new Transform[3, 3];
-    Token[,] _tokens = new Token[3, 3];
-    Transform[,] _tokenTransform = new Transform[3, 3];
-    Vector2[,] _rectPosition = new Vector2[5, 5]; //position is the same for tiles and tokens. Used for animations.
-    int[,] _prevTileVrijednost = new int[3, 3]; //buffer values
-    int[,] _prevTokenVrijednost = new int[3, 3]; //buffer values
-    Token[] _replaceTokens; //used for animation only
-    Tile[] _replaceTiles; //used for animation only
-    int _moveTokenEvenCounter; //token are moved twice per player action. Some values shouldn't be updated twice and this bool makes sure of that.
+    private Tile[,] tiles = new Tile[3, 3];
+    public static Transform[,] TileTransforms = new Transform[3, 3];
+    public static Token[,] Tokens = new Token[3, 3];
+    private Transform[,] tokenTransforms = new Transform[3, 3];
+    private Vector2[,] rectPositions = new Vector2[5, 5]; //position is the same for tiles and tokens. Used for animations.
+    private int[,] prevTileValues = new int[3, 3]; //buffer values
+    private int[,] prevTokenValues = new int[3, 3]; //buffer values
+    private Token[] substituteTokens; //used for animation only
+    private Tile[] substituteTiles; //used for animation only
+    private int moveTokenEvenCounter; //token are moved twice per player action. Some values shouldn't be updated twice and this bool makes sure of that.
 
     private int currentMovesToWin = -1;
     private int currentPositionIndex = -1;
     private int previousPositionIndex = -1;
-    #region//TWEENS
-    [SerializeField] Ease izy;
-    const float CONST_TWEENDURATION = 1f;
-    int _tweenFinishedCounter = 0; // inputs (drags) are disabled until tween finishes. Int is used instead of bool beacuse MoveToken is called twice per drag.
-    bool _tweenOneHitCheck = true; // tween are called 6+ times and they all OnComplete(EndTween). That method should be called once, not 6 times.
+
+    private int tweenFinishedCounter = 0; // inputs (drags) are disabled until tween finishes. Int is used instead of bool beacuse MoveToken is called twice per drag.
+    private bool isTweenOneHit = true; // tween are called 6+ times and they all OnComplete(EndTween). That method should be called once, not 6 times.
+
+
+    public static Vector2Int[,] CurrCoordinates = new Vector2Int[3, 3];
+    private Vector2Int[,] prevCoordinates = new Vector2Int[3, 3];
+    readonly Dictionary<int[], int[]> mainPairs = new Dictionary<int[], int[]>();
+    readonly List<int[]> allCombinations = new List<int[]>();
+
+    #region HARDCODED LAYOUTS
+    public static readonly int[] layNull = new int[4] { 0, 0, 0, 0 };
+    public static readonly int[] lay0 = new int[4] { 1, 2, 3, 4 };
+    public static readonly int[] lay1 = new int[4] { 1, 2, 4, 3 };
+    public static readonly int[] lay2 = new int[4] { 1, 3, 2, 4 };
+    public static readonly int[] lay3 = new int[4] { 1, 3, 4, 2 };
+    public static readonly int[] lay4 = new int[4] { 1, 4, 2, 3 };
+    public static readonly int[] lay5 = new int[4] { 1, 4, 3, 2 };
+    public static readonly int[] lay6 = new int[4] { 2, 1, 3, 4 };
+    public static readonly int[] lay7 = new int[4] { 2, 1, 4, 3 };
+    public static readonly int[] lay8 = new int[4] { 2, 3, 1, 4 };
+    public static readonly int[] lay9 = new int[4] { 2, 3, 4, 1 };
+    public static readonly int[] lay10 = new int[4] { 2, 4, 1, 3 };
+    public static readonly int[] lay11 = new int[4] { 2, 4, 3, 1 };
+    public static readonly int[] lay12 = new int[4] { 3, 1, 2, 4 };
+    public static readonly int[] lay13 = new int[4] { 3, 1, 4, 2 };
+    public static readonly int[] lay14 = new int[4] { 3, 2, 1, 4 };
+    public static readonly int[] lay15 = new int[4] { 3, 2, 4, 1 };
+    public static readonly int[] lay16 = new int[4] { 3, 4, 1, 2 };
+    public static readonly int[] lay17 = new int[4] { 3, 4, 2, 1 };
+    public static readonly int[] lay18 = new int[4] { 4, 1, 2, 3 };
+    public static readonly int[] lay19 = new int[4] { 4, 1, 3, 2 };
+    public static readonly int[] lay20 = new int[4] { 4, 2, 1, 3 };
+    public static readonly int[] lay21 = new int[4] { 4, 2, 3, 1 };
+    public static readonly int[] lay22 = new int[4] { 4, 3, 1, 2 };
+    public static readonly int[] lay23 = new int[4] { 4, 3, 2, 1 };
     #endregion
 
-    #region//HINT VARIABLES
-    Transform[] _hintElements;
-    Vector2Int[,] _currCoordinates = new Vector2Int[3, 3];
-    Vector2Int[,] _prevCoordinates = new Vector2Int[3, 3];
-    readonly Dictionary<int[], int[]> _mainPairs = new Dictionary<int[], int[]>();
-    readonly List<int[]> _allCombinations = new List<int[]>();
-    readonly int[] layNull = new int[4] { 0, 0, 0, 0 };
-    readonly int[] lay0 = new int[4] { 1, 2, 3, 4 };
-    readonly int[] lay1 = new int[4] { 1, 2, 4, 3 };
-    readonly int[] lay2 = new int[4] { 1, 3, 2, 4 };
-    readonly int[] lay3 = new int[4] { 1, 3, 4, 2 };
-    readonly int[] lay4 = new int[4] { 1, 4, 2, 3 };
-    readonly int[] lay5 = new int[4] { 1, 4, 3, 2 };
-    readonly int[] lay6 = new int[4] { 2, 1, 3, 4 };
-    readonly int[] lay7 = new int[4] { 2, 1, 4, 3 };
-    readonly int[] lay8 = new int[4] { 2, 3, 1, 4 };
-    readonly int[] lay9 = new int[4] { 2, 3, 4, 1 };
-    readonly int[] lay10 = new int[4] { 2, 4, 1, 3 };
-    readonly int[] lay11 = new int[4] { 2, 4, 3, 1 };
-    readonly int[] lay12 = new int[4] { 3, 1, 2, 4 };
-    readonly int[] lay13 = new int[4] { 3, 1, 4, 2 };
-    readonly int[] lay14 = new int[4] { 3, 2, 1, 4 };
-    readonly int[] lay15 = new int[4] { 3, 2, 4, 1 };
-    readonly int[] lay16 = new int[4] { 3, 4, 1, 2 };
-    readonly int[] lay17 = new int[4] { 3, 4, 2, 1 };
-    readonly int[] lay18 = new int[4] { 4, 1, 2, 3 };
-    readonly int[] lay19 = new int[4] { 4, 1, 3, 2 };
-    readonly int[] lay20 = new int[4] { 4, 2, 1, 3 };
-    readonly int[] lay21 = new int[4] { 4, 2, 3, 1 };
-    readonly int[] lay22 = new int[4] { 4, 3, 1, 2 };
-    readonly int[] lay23 = new int[4] { 4, 3, 2, 1 };
-
-
-    Dictionary<int[], HintDirection> dic = new Dictionary<int[], HintDirection>();
-    readonly HintDirection[] _directions =
-    {
-        HintDirection.None,
-        HintDirection.YYdoubleTap,
-        HintDirection.LeftSwipe,
-        HintDirection.DownSwipe,
-        HintDirection.UpSwipe,
-        HintDirection.YYdoubleTap,
-        HintDirection.YYdoubleTap,
-        HintDirection.DownSwipe,
-        HintDirection.RightSwipe,
-        HintDirection.YYdoubleTap,
-        HintDirection.LeftSwipe,
-        HintDirection.UpSwipe,
-        HintDirection.LeftSwipe,
-        HintDirection.YYdoubleTap,
-        HintDirection.DownSwipe,
-        HintDirection.DownSwipe,
-        HintDirection.RightSwipe,
-        HintDirection.LeftSwipe,
-        HintDirection.YYdoubleTap,
-        HintDirection.LeftSwipe,
-        HintDirection.RightSwipe,
-        HintDirection.YYdoubleTap,
-        HintDirection.YYdoubleTap,
-        HintDirection.DownSwipe
-    };
-    #endregion
+    
 
     private void Awake()
     {
-        gm = this;
+        Instance = this;
     }
+
     private void Start()
     {
         NewGameBoard();
     }
-
-    #region//EVENTS, BUTTONS
-    private void OnEnable()
-    {
-        scoreText.text = setting.score.ToString();
-        xpText.text = setting.xp.ToString();
-        HelperScript.LevelFinished += Ev_LevelDone;
-        btnLevelDone[0].onClick.AddListener(HandleBtnNextLevelClick);
-        btnLevelDone[1].onClick.AddListener(HandleBtnMainMenuClick);
-        btnBack.onClick.AddListener(HandleBtnMainMenuClick);
-        btnSkin.onClick.AddListener(delegate
-        {
-            SkinChooser(true);
-        });
-        btnHint.onClick.AddListener(HandleBtnHintClick);
-    }
-
-    private void OnDisable()
-    {
-        HelperScript.LevelFinished -= Ev_LevelDone;
-        btnLevelDone[0].onClick.RemoveListener(HandleBtnNextLevelClick);
-        btnLevelDone[1].onClick.RemoveListener(HandleBtnMainMenuClick);
-        btnBack.onClick.RemoveListener(HandleBtnMainMenuClick);
-        btnSkin.onClick.RemoveAllListeners();
-        btnHint.onClick.RemoveListener(HandleBtnHintClick);
-    }
-
-    private void Ev_LevelDone(int lv)
-    {
-        ResetAllHints();
-        _tweenFinishedCounter = 100;
-        setting.level += 1;
-
-        if (setting.level > 19 && setting.score < setting.firstPhaseScore ||
-            setting.level > 99 && setting.score < setting.secondPhaseScore ||
-            setting.level > 252 && setting.score > setting.secondPhaseScore)
-        {
-            setting.level = 0;
-        }
-
-
-        levelDoneGO.SetActive(true);
-        btnLevelDone[0].gameObject.SetActive(true);
-        btnLevelDone[1].gameObject.SetActive(true);
-    }
-
-    private void HandleBtnNextLevelClick()
-    {
-        SceneManager.LoadScene(1);
-    }
-
-    private void HandleBtnMainMenuClick()
-    {
-        SceneManager.LoadScene(0);
-    }
-
-    private void HandleBtnHintClick()
-    {
-        setting.showHints = !setting.showHints;
-        MainHint();
-    }
-
-    #endregion
 
     private void Update()
     {
@@ -204,35 +91,35 @@ public class GameManager : MonoBehaviour
 
     private void NewGameBoard()
     {
-        _skinCounter = setting.skinOrdinal;
-        SkinChooser(false);
+        SquariconGlobalEvents.OnLevelStarted?.Invoke();
+     
 
-        _replaceTiles = HelperScript.GetAllChildernByType<Tile>(parTileReplace);
-        _replaceTokens = HelperScript.GetAllChildernByType<Token>(parTokenReplace);
+        substituteTiles = HelperScript.GetAllChildernByType<Tile>(parTileReplace);
+        substituteTokens = HelperScript.GetAllChildernByType<Token>(parTokenReplace);
         InitializationMain(MainType.Tile);
         InitializationMain(MainType.Token);
 
         IniDic();
 
         // current position from 23 possible positions
-        currentPositionIndex = setting.GetPositionForLevelAndScore(setting.level,setting.score);
+        currentPositionIndex = settings.GetPositionForLevelAndScore(settings.level,settings.score);
 
-        _tokens[1, 0].Vrijednost = _tokens[1, 2].Vrijednost = _allCombinations[currentPositionIndex][0];
-        _tokens[2, 0].Vrijednost = _tokens[0, 2].Vrijednost = _allCombinations[currentPositionIndex][1];
-        _tokens[0, 0].Vrijednost = _tokens[2, 2].Vrijednost = _allCombinations[currentPositionIndex][2];
-        _tokens[0, 1].Vrijednost = _tokens[2, 1].Vrijednost = _allCombinations[currentPositionIndex][3];
+        Tokens[1, 0].Value = Tokens[1, 2].Value = allCombinations[currentPositionIndex][0];
+        Tokens[2, 0].Value = Tokens[0, 2].Value = allCombinations[currentPositionIndex][1];
+        Tokens[0, 0].Value = Tokens[2, 2].Value = allCombinations[currentPositionIndex][2];
+        Tokens[0, 1].Value = Tokens[2, 1].Value = allCombinations[currentPositionIndex][3];
         currentMovesToWin = GetMovesToWinForPositionIndex(currentPositionIndex);
-        InitializationHint();
+        SquariconGlobalEvents.OnInitializationHint?.Invoke();
     }
 
     private int GetPositionIndexFromCurrentVrijednost()
     {
-        for(int i = 0; i < _allCombinations.Count; i++)
+        for(int i = 0; i < allCombinations.Count; i++)
         {
-            if(_tokens[1, 0].Vrijednost == _allCombinations[i][0] &&
-               _tokens[2, 0].Vrijednost == _allCombinations[i][1] &&
-               _tokens[0, 0].Vrijednost == _allCombinations[i][2] &&
-               _tokens[0, 1].Vrijednost == _allCombinations[i][3])
+            if(Tokens[1, 0].Value == allCombinations[i][0] &&
+               Tokens[2, 0].Value == allCombinations[i][1] &&
+               Tokens[0, 0].Value == allCombinations[i][2] &&
+               Tokens[0, 1].Value == allCombinations[i][3])
             {
                 return i;
             }
@@ -244,7 +131,7 @@ public class GameManager : MonoBehaviour
 
     private int GetMovesToWinForPositionIndex(int positionIndex)
     {
-        return mowesToWinList[positionIndex];
+        return movesToWinList[positionIndex];
     }
 
     public void HandleMoveFinished()
@@ -257,24 +144,21 @@ public class GameManager : MonoBehaviour
 
         //DebugCurrentAndPreviousPosition();
 
-        goodMoveMarker.gameObject.SetActive(false);
-        wrongMoveMarker.gameObject.SetActive(false);
+
         if (newMovesToWin < currentMovesToWin)
         {
-            setting.goodMoveStreak++;
-            setting.xp += GetXpForWinStreak(setting.goodMoveStreak);
-            setting.AddScore(GetScoreForWinStreak(setting.goodMoveStreak));
-            PlayerPrefs.SetInt("XP", setting.xp);
-            scoreText.text = setting.score.ToString();
-            xpText.text = setting.xp.ToString();
-            //Debug.LogError("Score is now: " + setting.score);
+            settings.goodMoveStreak++;
+            settings.xp += GetXpForWinStreak(settings.goodMoveStreak);
+            settings.AddScore(GetScoreForWinStreak(settings.goodMoveStreak));
+            PlayerPrefs.SetInt("XP", settings.xp);
 
-            StartCoroutine(ShowMarkerThenHideItAfterSeconds(goodMoveMarker, 3f));
+            SquariconGlobalEvents.OnScoreUpdated?.Invoke();
+            SquariconGlobalEvents.OnGoodMoveHappened?.Invoke();
         }
         else
         {
-            setting.goodMoveStreak = 0;
-            StartCoroutine(ShowMarkerThenHideItAfterSeconds(wrongMoveMarker, 3f));
+            settings.goodMoveStreak = 0;
+            SquariconGlobalEvents.OnBadMoveHappened?.Invoke();
         }
 
         currentMovesToWin = newMovesToWin;
@@ -324,10 +208,10 @@ public class GameManager : MonoBehaviour
 
     private void DebugCurrentAndPreviousPosition()
     {
-        _tokens[1, 0].Vrijednost = _tokens[1, 2].Vrijednost = _allCombinations[currentPositionIndex][0];
-        _tokens[2, 0].Vrijednost = _tokens[0, 2].Vrijednost = _allCombinations[currentPositionIndex][1];
-        _tokens[0, 0].Vrijednost = _tokens[2, 2].Vrijednost = _allCombinations[currentPositionIndex][2];
-        _tokens[0, 1].Vrijednost = _tokens[2, 1].Vrijednost = _allCombinations[currentPositionIndex][3];
+        Tokens[1, 0].Value = Tokens[1, 2].Value = allCombinations[currentPositionIndex][0];
+        Tokens[2, 0].Value = Tokens[0, 2].Value = allCombinations[currentPositionIndex][1];
+        Tokens[0, 0].Value = Tokens[2, 2].Value = allCombinations[currentPositionIndex][2];
+        Tokens[0, 1].Value = Tokens[2, 1].Value = allCombinations[currentPositionIndex][3];
 
         Debug.LogError("PREV POS INDEX " + previousPositionIndex);
         if(previousPositionIndex >= 0)
@@ -343,73 +227,14 @@ public class GameManager : MonoBehaviour
 
     private void DebugPositionIndex(int positionIndex)
     {
-        Debug.LogError("{" + _allCombinations[positionIndex][0] + "," 
-                           + _allCombinations[positionIndex][1] + ","
-                           + _allCombinations[positionIndex][2] + ","
-                           + _allCombinations[positionIndex][3] + "}");
+        Debug.LogError("{" + allCombinations[positionIndex][0] + "," 
+                           + allCombinations[positionIndex][1] + ","
+                           + allCombinations[positionIndex][2] + ","
+                           + allCombinations[positionIndex][3] + "}");
 
-        Debug.LogError("MOVES TO WIN: " + mowesToWinList[positionIndex]);
+        Debug.LogError("MOVES TO WIN: " + movesToWinList[positionIndex]);
     }
 
-    private IEnumerator ShowMarkerThenHideItAfterSeconds(GameObject markerObject, float seconds)
-    {
-        yield return new WaitForSeconds(0.2f);
-        markerObject.SetActive(true);
-        yield return new WaitForSeconds(seconds);
-        markerObject.SetActive(false);
-    }
-
-    /// <summary>
-    /// Changes skin. Loads them from RESOURCES folder. Name of each folder that holds skin should be Skin0x, where 0x is number of skin.
-    /// </summary>
-    /// <param name="incrementSkin">Everything about skins is updated in this method. False just means to update all, but dont incrmenet to next skin. False is sed in initialization only. </param>
-    private void SkinChooser(bool incrementSkin)
-    {
-        if (incrementSkin)
-        {
-            _skinCounter = (1 + _skinCounter) % CONST_SKINMAX;
-            setting.skinOrdinal = _skinCounter;
-        }
-        setting.tileSprites.Clear();
-        setting.tokenSprites.Clear();
-
-        string dec = setting.skinOrdinal < 10 ? "0" : "";
-        string folderName = "Skin" + dec + setting.skinOrdinal.ToString();
-        Sprite[] allSprites = Resources.LoadAll<Sprite>(folderName);
-        if (allSprites == null || allSprites.Length <= 0)
-        {
-            Debug.Log("Can't find skin, returning default skin");
-            allSprites = Resources.LoadAll<Sprite>("Skin00");
-        }
-        for (int i = 0; i < allSprites.Length; i++)
-        {
-            if (i % 2 == 0) setting.tileSprites.Add(allSprites[i]);
-            else setting.tokenSprites.Add(allSprites[i]);
-        }
-
-        HelperScript.SkinUpdated?.Invoke();
-
-        for (int i = 0; i < imageToColorSkin.Length; i++)
-        {
-            imageToColorSkin[i].color = skinColors[_skinCounter];
-        }
-        textToColorSkin.color = skinColors[_skinCounter];
-
-    }
-    /// <summary>
-    /// Randomizes next level. 
-    /// </summary>
-    /// <param name="prevLevel">Makes sure that next level is different prfom previous</param>
-    /// <returns></returns>
-    private int RandomLevel(int prevLevel)
-    {
-        List<int> brojevi = Enumerable.Range(0, 23).ToList();
-        brojevi.Remove(prevLevel);
-        var rnd = new System.Random();
-        List<int> list = brojevi.OrderBy(n => rnd.Next()).ToList();
-        setting.level = list[0];
-        return list[0];
-    }
     private void InitializationMain(MainType mainType)
     {
         int counter = 0;
@@ -419,16 +244,15 @@ public class GameManager : MonoBehaviour
             {
                 if (mainType == MainType.Tile)
                 {
-                    _tiles[i, j] = parTile.GetChild(counter).GetComponent<Tile>();
-                    _tiles[i, j].Pozicija = new Vector2Int(i, j);
-                    _tileTransform[i, j] = _tiles[i, j].transform;
+                    tiles[i, j] = parTile.GetChild(counter).GetComponent<Tile>();
+                    tiles[i, j].MyPosition = new Vector2Int(i, j);
+                    TileTransforms[i, j] = tiles[i, j].transform;
                 }
                 else
                 {
-                    _tokens[i, j] = parToken.GetChild(counter).GetComponent<Token>();
-                    _tokens[i, j].Pozicija = new Vector2Int(i, j);
-                  //  print(_tokens[i, j].name);
-                    _tokenTransform[i, j] = _tokens[i, j].transform;
+                    Tokens[i, j] = parToken.GetChild(counter).GetComponent<Token>();
+                    Tokens[i, j].MyPosition = new Vector2Int(i, j);
+                    tokenTransforms[i, j] = Tokens[i, j].transform;
                 }
                 counter++;
             }
@@ -440,7 +264,7 @@ public class GameManager : MonoBehaviour
             {
                 for (int i = 0; i < 5; i++)
                 {
-                    _rectPosition[i, j] = parPositions.GetChild(counter).position;
+                    rectPositions[i, j] = parPositions.GetChild(counter).position;
                     counter++;
                 }
             }
@@ -448,188 +272,69 @@ public class GameManager : MonoBehaviour
     }
     #endregion
 
-    #region //HINT
-    private void InitializationHint()
-    {
-        _hintElements = HelperScript.GetAllChildernByType<Transform>(parHintElements);
-        int counter = 0;
-        for (int j = 0; j < 3; j++)
-        {
-            for (int i = 0; i < 3; i++)
-            {
-                _currCoordinates[i, j] = new Vector2Int(i, j);
-                counter++;
-            }
-        }
-
-        MainHint();
-    }
     private void IniDic()
     {
-        _allCombinations.Add(lay0);
-        _allCombinations.Add(lay1);
-        _allCombinations.Add(lay2);
-        _allCombinations.Add(lay3);
-        _allCombinations.Add(lay4);
-        _allCombinations.Add(lay5);
-        _allCombinations.Add(lay6);
-        _allCombinations.Add(lay7);
-        _allCombinations.Add(lay8);
-        _allCombinations.Add(lay9);
-        _allCombinations.Add(lay10);
-        _allCombinations.Add(lay11);
-        _allCombinations.Add(lay12);
-        _allCombinations.Add(lay13);
-        _allCombinations.Add(lay14);
-        _allCombinations.Add(lay15);
-        _allCombinations.Add(lay16);
-        _allCombinations.Add(lay17);
-        _allCombinations.Add(lay18);
-        _allCombinations.Add(lay19);
-        _allCombinations.Add(lay20);
-        _allCombinations.Add(lay21);
-        _allCombinations.Add(lay22);
-        _allCombinations.Add(lay23);
+        allCombinations.Add(lay0);
+        allCombinations.Add(lay1);
+        allCombinations.Add(lay2);
+        allCombinations.Add(lay3);
+        allCombinations.Add(lay4);
+        allCombinations.Add(lay5);
+        allCombinations.Add(lay6);
+        allCombinations.Add(lay7);
+        allCombinations.Add(lay8);
+        allCombinations.Add(lay9);
+        allCombinations.Add(lay10);
+        allCombinations.Add(lay11);
+        allCombinations.Add(lay12);
+        allCombinations.Add(lay13);
+        allCombinations.Add(lay14);
+        allCombinations.Add(lay15);
+        allCombinations.Add(lay16);
+        allCombinations.Add(lay17);
+        allCombinations.Add(lay18);
+        allCombinations.Add(lay19);
+        allCombinations.Add(lay20);
+        allCombinations.Add(lay21);
+        allCombinations.Add(lay22);
+        allCombinations.Add(lay23);
 
 
-        _mainPairs.Add(lay0, layNull);
-        _mainPairs.Add(lay1, lay15);
-        _mainPairs.Add(lay2, lay14);
-        _mainPairs.Add(lay3, lay0);
-        _mainPairs.Add(lay4, lay0);
-        _mainPairs.Add(lay5, lay11);
-        _mainPairs.Add(lay6, lay19);
-        _mainPairs.Add(lay7, lay8);
-        _mainPairs.Add(lay8, lay0);
-        _mainPairs.Add(lay9, lay2);
-        _mainPairs.Add(lay10, lay18);
-        _mainPairs.Add(lay11, lay8);
-        _mainPairs.Add(lay12, lay0);
-        _mainPairs.Add(lay13, lay7);
-        _mainPairs.Add(lay14, lay17);
-        _mainPairs.Add(lay15, lay12);
-        _mainPairs.Add(lay16, lay2);
-        _mainPairs.Add(lay17, lay21);
-        _mainPairs.Add(lay18, lay12);
-        _mainPairs.Add(lay19, lay3);
-        _mainPairs.Add(lay20, lay4);
-        _mainPairs.Add(lay21, lay0);
-        _mainPairs.Add(lay22, lay8);
-        _mainPairs.Add(lay23, lay19);
-
-        dic.Add(lay0, _directions[0]);
-        dic.Add(lay1, _directions[1]);
-        dic.Add(lay2, _directions[2]);
-        dic.Add(lay3, _directions[3]);
-        dic.Add(lay4, _directions[4]);
-        dic.Add(lay5, _directions[5]);
-        dic.Add(lay6, _directions[6]);
-        dic.Add(lay7, _directions[7]);
-        dic.Add(lay8, _directions[8]);
-        dic.Add(lay9, _directions[9]);
-        dic.Add(lay10, _directions[10]);
-        dic.Add(lay11, _directions[11]);
-        dic.Add(lay12, _directions[12]);
-        dic.Add(lay13, _directions[13]);
-        dic.Add(lay14, _directions[14]);
-        dic.Add(lay15, _directions[15]);
-        dic.Add(lay16, _directions[16]);
-        dic.Add(lay17, _directions[17]);
-        dic.Add(lay18, _directions[18]);
-        dic.Add(lay19, _directions[19]);
-        dic.Add(lay20, _directions[20]);
-        dic.Add(lay21, _directions[21]);
-        dic.Add(lay22, _directions[22]);
-        dic.Add(lay23, _directions[23]);
+        mainPairs.Add(lay0, layNull);
+        mainPairs.Add(lay1, lay15);
+        mainPairs.Add(lay2, lay14);
+        mainPairs.Add(lay3, lay0);
+        mainPairs.Add(lay4, lay0);
+        mainPairs.Add(lay5, lay11);
+        mainPairs.Add(lay6, lay19);
+        mainPairs.Add(lay7, lay8);
+        mainPairs.Add(lay8, lay0);
+        mainPairs.Add(lay9, lay2);
+        mainPairs.Add(lay10, lay18);
+        mainPairs.Add(lay11, lay8);
+        mainPairs.Add(lay12, lay0);
+        mainPairs.Add(lay13, lay7);
+        mainPairs.Add(lay14, lay17);
+        mainPairs.Add(lay15, lay12);
+        mainPairs.Add(lay16, lay2);
+        mainPairs.Add(lay17, lay21);
+        mainPairs.Add(lay18, lay12);
+        mainPairs.Add(lay19, lay3);
+        mainPairs.Add(lay20, lay4);
+        mainPairs.Add(lay21, lay0);
+        mainPairs.Add(lay22, lay8);
+        mainPairs.Add(lay23, lay19);
     }
 
-    private void MainHint()
-    {
-        HintDirection hintDirection = HintDirection.UpSwipe;
-        foreach (KeyValuePair<int[], HintDirection> item in dic)
-        {
-            if (item.Key[0] == _tokens[1, 0].Vrijednost && 
-                item.Key[1] == _tokens[2, 0].Vrijednost && 
-                item.Key[2] == _tokens[0, 0].Vrijednost && 
-                item.Key[3] == _tokens[2, 1].Vrijednost)
-            {
-                hintDirection = item.Value;
-                break;
-            }
-        }
-
-
-        switch (hintDirection)
-        {
-            case HintDirection.UpSwipe:
-                _hintElements[0].position = _tileTransform[2, 1].position;
-                _hintElements[0].gameObject.SetActive(true);
-                _hintElements[0].localEulerAngles = new Vector3(0f, 0f, 90f);
-                _hintElements[1].position = _tileTransform[0, 1].position;
-                _hintElements[1].gameObject.SetActive(true);
-                _hintElements[1].localEulerAngles = new Vector3(0f, 0f, -90f);
-                break;
-
-            case HintDirection.RightSwipe:
-                _hintElements[0].position = _tileTransform[1, 0].position;
-                _hintElements[0].gameObject.SetActive(true);
-                _hintElements[1].position = _tileTransform[1, 2].position;
-                _hintElements[1].localEulerAngles = new Vector3(0f, 0f, 180f);
-                _hintElements[1].gameObject.SetActive(true);
-                break;
-
-            case HintDirection.DownSwipe:
-                _hintElements[0].position = _tileTransform[2, 1].position;
-                _hintElements[0].gameObject.SetActive(true);
-                _hintElements[0].localEulerAngles = new Vector3(0f, 0f, -90f);
-                _hintElements[1].position = _tileTransform[0, 1].position;
-                _hintElements[1].gameObject.SetActive(true);
-                _hintElements[1].localEulerAngles = new Vector3(0f, 0f, 90f);
-                break;
-
-            case HintDirection.LeftSwipe:
-                _hintElements[0].position = _tileTransform[1, 0].position;
-                _hintElements[0].localEulerAngles = new Vector3(0f, 0f, 180f);
-                _hintElements[0].gameObject.SetActive(true);
-                _hintElements[1].position = _tileTransform[1, 2].position;
-                _hintElements[1].gameObject.SetActive(true);
-                break;
-
-            case HintDirection.YYdoubleTap:
-                _hintElements[2].position = _tileTransform[1, 1].position;
-                _hintElements[2].gameObject.SetActive(true);
-                break;
-            case HintDirection.None:
-                if (!_levelDone) HelperScript.LevelFinished?.Invoke(setting.level);
-                _levelDone = true;
-                break;
-        }
-        if (!setting.showHints) ResetAllHints();
-
-    }
-
-    private void ResetAllHints()
-    {
-        for (int i = 0; i < _hintElements.Length; i++)
-        {
-            _hintElements[i].localEulerAngles = Vector3.zero;
-            _hintElements[i].gameObject.SetActive(false);
-        }
-    }
-
-    #endregion
-
-    #region//MAIN MECHANICS
+    //#region//MAIN MECHANICS
     public void MoveTokenByPosition(Vector2Int moveDir, Vector2Int poz)
     {
-        if (_tweenFinishedCounter > 1) return;
-        _tweenFinishedCounter++;
-        _tweenOneHitCheck = false;
-        bool incrementHint = _moveTokenEvenCounter % 2 == 0;
-        if (incrementHint) _roundCounter++;
-        RecordPreviousVrijednost();
+        if (tweenFinishedCounter > 1) return;
+        tweenFinishedCounter++;
+        isTweenOneHit = false;
+        RecordPreviousValue();
 
-        _replaceTokens[_moveTokenEvenCounter].gameObject.SetActive(true);
+        substituteTokens[moveTokenEvenCounter].gameObject.SetActive(true);
 
         if (moveDir.x != 0) //horizontal move
         {
@@ -637,27 +342,27 @@ public class GameManager : MonoBehaviour
             int dirTransform = moveDir.x == 1 ? 0 : 2;
             for (int i = 0; i < 3; i++)
             {
-                _tokens[i, poz.y].Vrijednost = _prevTokenVrijednost[(i + dirToken) % 3, poz.y];
-                _tokenTransform[i, poz.y].DOMove(_rectPosition[i + 1, poz.y + 1], CONST_TWEENDURATION)
-                    .From(_rectPosition[i + dirTransform, poz.y + 1])
-                    .SetEase(izy)
-                    .OnComplete(() => EndTweenDrag(incrementHint));
+                Tokens[i, poz.y].Value = prevTokenValues[(i + dirToken) % 3, poz.y];
+                tokenTransforms[i, poz.y].DOMove(rectPositions[i + 1, poz.y + 1], CONST_TWEENDURATION)
+                    .From(rectPositions[i + dirTransform, poz.y + 1])
+                    .SetEase(easingType)
+                    .OnComplete(() => EndTweenDrag());
             }
 
             //edge tokens, needed for tween animation only
             if (moveDir.x == 1)
             {
-                _replaceTokens[_moveTokenEvenCounter].Vrijednost = _prevTokenVrijednost[2, poz.y];
-                _replaceTokens[_moveTokenEvenCounter].transform.DOMove(_rectPosition[4, poz.y + 1], CONST_TWEENDURATION)
-                    .SetEase(izy)
-                    .From(_rectPosition[3, poz.y + 1]);
+                substituteTokens[moveTokenEvenCounter].Value = prevTokenValues[2, poz.y];
+                substituteTokens[moveTokenEvenCounter].transform.DOMove(rectPositions[4, poz.y + 1], CONST_TWEENDURATION)
+                    .SetEase(easingType)
+                    .From(rectPositions[3, poz.y + 1]);
             }
             else
             {
-                _replaceTokens[_moveTokenEvenCounter].Vrijednost = _prevTokenVrijednost[0, poz.y];
-                _replaceTokens[_moveTokenEvenCounter].transform.DOMove(_rectPosition[0, poz.y + 1], CONST_TWEENDURATION)
-                    .SetEase(izy)
-                    .From(_rectPosition[1, poz.y + 1]);
+                substituteTokens[moveTokenEvenCounter].Value = prevTokenValues[0, poz.y];
+                substituteTokens[moveTokenEvenCounter].transform.DOMove(rectPositions[0, poz.y + 1], CONST_TWEENDURATION)
+                    .SetEase(easingType)
+                    .From(rectPositions[1, poz.y + 1]);
             }
         }
         else if (moveDir.y != 0) //vertical move
@@ -666,34 +371,34 @@ public class GameManager : MonoBehaviour
             int dirTransform = moveDir.y == 1 ? 0 : 2;
             for (int j = 0; j < 3; j++)
             {
-                _tokens[poz.x, j].Vrijednost = _prevTokenVrijednost[poz.x, (j + dirToken) % 3];
-                _tokenTransform[poz.x, j].DOMove(_rectPosition[poz.x + 1, j + 1], CONST_TWEENDURATION)
-                    .From(_rectPosition[poz.x + 1, j + dirTransform])
-                    .SetEase(izy)
-                    .OnComplete(() => EndTweenDrag(incrementHint));
+                Tokens[poz.x, j].Value = prevTokenValues[poz.x, (j + dirToken) % 3];
+                tokenTransforms[poz.x, j].DOMove(rectPositions[poz.x + 1, j + 1], CONST_TWEENDURATION)
+                    .From(rectPositions[poz.x + 1, j + dirTransform])
+                    .SetEase(easingType)
+                    .OnComplete(() => EndTweenDrag());
             }
 
             //edge tokens, needed for tween animation only
             if (moveDir.y == 1)
             {
-                _replaceTokens[_moveTokenEvenCounter].Vrijednost = _prevTokenVrijednost[poz.x, 2];
-                _replaceTokens[_moveTokenEvenCounter].transform.DOMove(_rectPosition[poz.x + 1, 4], CONST_TWEENDURATION)
-                    .SetEase(izy)
-                    .From(_rectPosition[poz.x + 1, 3]);
+                substituteTokens[moveTokenEvenCounter].Value = prevTokenValues[poz.x, 2];
+                substituteTokens[moveTokenEvenCounter].transform.DOMove(rectPositions[poz.x + 1, 4], CONST_TWEENDURATION)
+                    .SetEase(easingType)
+                    .From(rectPositions[poz.x + 1, 3]);
 
             }
             else
             {
-                _replaceTokens[_moveTokenEvenCounter].Vrijednost = _prevTokenVrijednost[poz.x, 0];
-                _replaceTokens[_moveTokenEvenCounter].transform.DOMove(_rectPosition[poz.x + 1, 0], CONST_TWEENDURATION)
-                    .SetEase(izy)
-                    .From(_rectPosition[poz.x + 1, 1]);
+                substituteTokens[moveTokenEvenCounter].Value = prevTokenValues[poz.x, 0];
+                substituteTokens[moveTokenEvenCounter].transform.DOMove(rectPositions[poz.x + 1, 0], CONST_TWEENDURATION)
+                    .SetEase(easingType)
+                    .From(rectPositions[poz.x + 1, 1]);
             }
 
         }
 
-        ResetAllHints();
-        _moveTokenEvenCounter = (1 + _moveTokenEvenCounter) % 2;
+        SquariconGlobalEvents.OnResetAllHints?.Invoke();
+        moveTokenEvenCounter = (1 + moveTokenEvenCounter) % 2;
     }
 
     public Vector2Int OppositePos(Vector2Int moveDirection, Vector2Int currentPosition)
@@ -718,52 +423,51 @@ public class GameManager : MonoBehaviour
         return v2Int;
     }
 
-    private void RecordPreviousVrijednost()
+    private void RecordPreviousValue()
     {
         for (int i = 0; i < 3; i++)
         {
             for (int j = 0; j < 3; j++)
             {
-                _prevTileVrijednost[i, j] = _tiles[i, j].Vrijednost;
-                _prevTokenVrijednost[i, j] = _tokens[i, j].Vrijednost;
-                _prevCoordinates[i, j] = _currCoordinates[i, j];
+                prevTileValues[i, j] = tiles[i, j].MyValue;
+                prevTokenValues[i, j] = Tokens[i, j].Value;
+                prevCoordinates[i, j] = CurrCoordinates[i, j];
             }
         }
     }
 
     public void MiddlePointActivation(Vector2Int poz)
     {
-        if (_tweenFinishedCounter > 0) return;
-        _tweenFinishedCounter = 100;
-        _tweenOneHitCheck = false;
-        _roundCounter++;
+        if (tweenFinishedCounter > 0) return;
+        tweenFinishedCounter = 100;
+        isTweenOneHit = false;
 
-        RecordPreviousVrijednost();
-        ResetAllHints();
+        RecordPreviousValue();
+        SquariconGlobalEvents.OnResetAllHints?.Invoke();
 
         Vector2Int greater = LimitVectorInt(poz + Vector2Int.one);
         Vector2Int smaller = LimitVectorInt(poz - Vector2Int.one);
 
-        _tokens[poz.x, greater.y].Vrijednost = _prevTokenVrijednost[smaller.x, poz.y];
-        _tokenTransform[poz.x, greater.y].DOMove(_rectPosition[poz.x + 1, greater.y + 1], CONST_TWEENDURATION)
-            .From(_rectPosition[smaller.x + 1, poz.y + 1])
-            .SetEase(izy)
-            .OnComplete(() => EndTweenDrag(true));
+        Tokens[poz.x, greater.y].Value = prevTokenValues[smaller.x, poz.y];
+        tokenTransforms[poz.x, greater.y].DOMove(rectPositions[poz.x + 1, greater.y + 1], CONST_TWEENDURATION)
+            .From(rectPositions[smaller.x + 1, poz.y + 1])
+            .SetEase(easingType)
+            .OnComplete(() => EndTweenDrag());
 
-        _tokens[smaller.x, poz.y].Vrijednost = _prevTokenVrijednost[poz.x, greater.y];
-        _tokenTransform[smaller.x, poz.y].DOMove(_rectPosition[smaller.x + 1, poz.y + 1], CONST_TWEENDURATION)
-            .From(_rectPosition[poz.x + 1, greater.y + 1])
-            .SetEase(izy);
+        Tokens[smaller.x, poz.y].Value = prevTokenValues[poz.x, greater.y];
+        tokenTransforms[smaller.x, poz.y].DOMove(rectPositions[smaller.x + 1, poz.y + 1], CONST_TWEENDURATION)
+            .From(rectPositions[poz.x + 1, greater.y + 1])
+            .SetEase(easingType);
 
-        _tokens[poz.x, smaller.y].Vrijednost = _prevTokenVrijednost[greater.x, poz.y];
-        _tokenTransform[poz.x, smaller.y].DOMove(_rectPosition[poz.x + 1, smaller.y + 1], CONST_TWEENDURATION)
-            .From(_rectPosition[greater.x + 1, poz.y + 1])
-            .SetEase(izy);
+        Tokens[poz.x, smaller.y].Value = prevTokenValues[greater.x, poz.y];
+        tokenTransforms[poz.x, smaller.y].DOMove(rectPositions[poz.x + 1, smaller.y + 1], CONST_TWEENDURATION)
+            .From(rectPositions[greater.x + 1, poz.y + 1])
+            .SetEase(easingType);
 
-        _tokens[greater.x, poz.y].Vrijednost = _prevTokenVrijednost[poz.x, smaller.y];
-        _tokenTransform[greater.x, poz.y].DOMove(_rectPosition[greater.x + 1, poz.y + 1], CONST_TWEENDURATION)
-            .From(_rectPosition[poz.x + 1, smaller.y + 1])
-            .SetEase(izy);
+        Tokens[greater.x, poz.y].Value = prevTokenValues[poz.x, smaller.y];
+        tokenTransforms[greater.x, poz.y].DOMove(rectPositions[greater.x + 1, poz.y + 1], CONST_TWEENDURATION)
+            .From(rectPositions[poz.x + 1, smaller.y + 1])
+            .SetEase(easingType);
     }
 
     private Vector2Int LimitVectorInt(Vector2Int v2Int)
@@ -777,38 +481,21 @@ public class GameManager : MonoBehaviour
         return vToLimit;
     }
 
-    private void EndTweenDrag(bool updateHint)
+    private void EndTweenDrag()
     {
-        if (!_tweenOneHitCheck)
+        if (!isTweenOneHit)
         {
-            _tweenOneHitCheck = true;
+            isTweenOneHit = true;
         }
         else return;
-        _tweenFinishedCounter = 0;
+        tweenFinishedCounter = 0;
 
         for (int i = 0; i < 9; i++)
         {
-            _replaceTiles[i].gameObject.SetActive(false);
-            _replaceTokens[i].gameObject.SetActive(false);
+            substituteTiles[i].gameObject.SetActive(false);
+            substituteTokens[i].gameObject.SetActive(false);
         }
 
-        MainHint();
-
-    }
-    #endregion
-
-    private void OnApplicationPause(bool pauseStatus)
-    {
-        if (pauseStatus)
-        {
-            PlayerPrefs.Save(); // Save when the app is paused
-        }
-    }
-
-    private void OnApplicationQuit()
-    {
-        PlayerPrefs.Save(); // Save when the app is closing
+        SquariconGlobalEvents.OnMainHint?.Invoke();
     }
 }
-
-

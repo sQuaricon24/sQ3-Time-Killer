@@ -1,53 +1,51 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using TMPro;
-using FirstCollection;
 using UnityEngine.UI;
 
 public class Token : MonoBehaviour
 {
-    GameManager gm;
+    private GameManager gm;
     [SerializeField] Image image;
-    public int Vrijednost
+    public int Value
     {
-        get => _vrijednost;
+        get => value;
         set
         {
-            _vrijednost = value;
-            image.sprite = gm.setting.tokenSprites[_vrijednost];
+            this.value = value;
+            image.sprite = gm.settings.tokenSprites[this.value];
         }
     }
-    int _vrijednost;
+    private int value;
 
-    public Vector2Int Pozicija
+    public Vector2Int MyPosition
     {
-        get => _pozicija;
+        get => myPosition;
         set
         {
-            _pozicija = value;
-            gameObject.name = $"Token {_pozicija.x} {_pozicija.y}";
+            myPosition = value;
+            gameObject.name = $"Token {myPosition.x} {myPosition.y}";
         }
     }
-    Vector2Int _pozicija;
+    private Vector2Int myPosition;
 
 
     private void Awake()
     {
-        gm = GameManager.gm;
+        gm = GameManager.Instance;
     }
+
     void OnEnable()
     {
-        HelperScript.SkinUpdated += Skins;
+        SquariconGlobalEvents.OnSkinUpdated += HandleSkinUpdated;
     }
+
     void OnDisable()
     {
-        HelperScript.SkinUpdated -= Skins;
+        SquariconGlobalEvents.OnSkinUpdated -= HandleSkinUpdated;
     }
-    void Skins()
+
+    void HandleSkinUpdated()
     {
-        Vrijednost = Vrijednost;
+        // why this?
+        Value = Value;
     }
-
-
 }

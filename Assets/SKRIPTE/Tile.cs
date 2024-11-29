@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -9,91 +7,93 @@ public class Tile : MonoBehaviour, IBeginDragHandler, IDragHandler, IPointerClic
 {
     GameManager gm;
 
-    [SerializeField] bool canBeDraged = true;
-    [SerializeField] Image image;
-    [SerializeField] int pocetnaVrijednost;
+    [SerializeField] private bool canBeDraged = true;
+    [SerializeField] private Image image;
+    [SerializeField] private int pocetnaVrijednost;
     public AllowedDirection allowedDirection;
 
-    public int Vrijednost
+    public int MyValue
     {
-        get => _vrijednost;
+        get => myValue;
         set
         {
-            _vrijednost = value;
-            image.sprite = gm.setting.tileSprites[_vrijednost];
+            myValue = value;
+            image.sprite = gm.settings.tileSprites[myValue];
         }
     }
-    int _vrijednost;
+    private int myValue;
 
-    public Vector2Int Pozicija 
+    public Vector2Int MyPosition 
     {
-        get => _pozicija;
+        get => myPosition;
         set
         {
-            _pozicija = value;
-            gameObject.name = $"Tile {_pozicija.x} {_pozicija.y}";
-            _oppositePoz = new Vector2Int((_pozicija.x + 2) % 2, (_pozicija.y + 2) % 2); //pogresno, ispraviti
+            myPosition = value;
+            gameObject.name = $"Tile {myPosition.x} {myPosition.y}";
+            oppositePosition = new Vector2Int((myPosition.x + 2) % 2, (myPosition.y + 2) % 2); //pogresno, ispraviti
         }
     }
-    Vector2Int _pozicija;
-    Vector2Int _oppositePoz;
+    private Vector2Int myPosition;
+    private Vector2Int oppositePosition;
 
-    Vector2 _dragDelta;
-    Vector2Int _moveDir;
+    private Vector2 dragDelta;
+    private Vector2Int moveDir;
 
 
     private void Awake()
     {
-        gm = GameManager.gm;
+        gm = GameManager.Instance;
     }
+
     void Start()
     {
-        Vrijednost = pocetnaVrijednost;
-
+        MyValue = pocetnaVrijednost;
     }
 
     void OnEnable()
     {
-        HelperScript.SkinUpdated += Skins;
+        SquariconGlobalEvents.OnSkinUpdated += HandleSkinUpdated;
     }
+
     void OnDisable()
     {
-        HelperScript.SkinUpdated -= Skins;
+        SquariconGlobalEvents.OnSkinUpdated -= HandleSkinUpdated;
     }
-    void Skins()
+
+    void HandleSkinUpdated()
     {
-        Vrijednost = Vrijednost;
+        MyValue = MyValue;
     }
 
     public void OnBeginDrag(PointerEventData eventData)
     {
         if (!canBeDraged) return;
 
-        _dragDelta = eventData.delta;
+        dragDelta = eventData.delta;
         if (allowedDirection == AllowedDirection.MiddlePoint)
         {
             return;
         }
 
-        if (Mathf.Abs(_dragDelta.x) > Mathf.Abs(_dragDelta.y))
+        if (Mathf.Abs(dragDelta.x) > Mathf.Abs(dragDelta.y))
         {
             if (allowedDirection == AllowedDirection.Vertical) return;
 
-            _moveDir = new Vector2Int(_dragDelta.x > 0 ? 1 : -1, 0);
+            moveDir = new Vector2Int(dragDelta.x > 0 ? 1 : -1, 0);
         }
-        else if (Mathf.Abs(_dragDelta.x) < Mathf.Abs(_dragDelta.y))
+        else if (Mathf.Abs(dragDelta.x) < Mathf.Abs(dragDelta.y))
         {
             if (allowedDirection == AllowedDirection.Horizontal) return;
 
-            _moveDir = new Vector2Int(0, _dragDelta.y > 0 ? 1 : -1);
+            moveDir = new Vector2Int(0, dragDelta.y > 0 ? 1 : -1);
         }
         else return;
 
-        gm.MoveTokenByPosition(_moveDir, Pozicija);
+        gm.MoveTokenByPosition(moveDir, MyPosition);
 
-        Vector2Int oppositePosition = gm.OppositePos(_moveDir, Pozicija);
+        Vector2Int oppositePosition = gm.OppositePos(moveDir, MyPosition);
         
-        gm.MoveTokenByPosition(-_moveDir, oppositePosition);
+        gm.MoveTokenByPosition(-moveDir, oppositePosition);
 
         gm.HandleMoveFinished();
     }
