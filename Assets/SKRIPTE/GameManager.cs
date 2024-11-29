@@ -10,6 +10,7 @@ using System.Linq;
 
 public class GameManager : MonoBehaviour
 {
+    [SerializeField] private Button btnBack;
     [SerializeField] private TextMeshProUGUI scoreText;
     [SerializeField] private TextMeshProUGUI xpText;
     public static GameManager gm;
@@ -136,23 +137,27 @@ public class GameManager : MonoBehaviour
         scoreText.text = setting.score.ToString();
         xpText.text = setting.xp.ToString();
         HelperScript.LevelFinished += Ev_LevelDone;
-        btnLevelDone[0].onClick.AddListener(Btn_NextLevel);
-        btnLevelDone[1].onClick.AddListener(Btn_MainMenu);
+        btnLevelDone[0].onClick.AddListener(HandleBtnNextLevelClick);
+        btnLevelDone[1].onClick.AddListener(HandleBtnMainMenuClick);
+        btnBack.onClick.AddListener(HandleBtnMainMenuClick);
         btnSkin.onClick.AddListener(delegate
         {
             SkinChooser(true);
         });
-        btnHint.onClick.AddListener(Btn_Hint);
+        btnHint.onClick.AddListener(HandleBtnHintClick);
     }
+
     private void OnDisable()
     {
         HelperScript.LevelFinished -= Ev_LevelDone;
-        btnLevelDone[0].onClick.RemoveListener(Btn_NextLevel);
-        btnLevelDone[1].onClick.RemoveListener(Btn_MainMenu);
+        btnLevelDone[0].onClick.RemoveListener(HandleBtnNextLevelClick);
+        btnLevelDone[1].onClick.RemoveListener(HandleBtnMainMenuClick);
+        btnBack.onClick.RemoveListener(HandleBtnMainMenuClick);
         btnSkin.onClick.RemoveAllListeners();
-        btnHint.onClick.RemoveListener(Btn_Hint);
+        btnHint.onClick.RemoveListener(HandleBtnHintClick);
     }
-    void Ev_LevelDone(int lv)
+
+    private void Ev_LevelDone(int lv)
     {
         ResetAllHints();
         _tweenFinishedCounter = 100;
@@ -170,15 +175,18 @@ public class GameManager : MonoBehaviour
         btnLevelDone[0].gameObject.SetActive(true);
         btnLevelDone[1].gameObject.SetActive(true);
     }
-    void Btn_NextLevel()
+
+    private void HandleBtnNextLevelClick()
     {
         SceneManager.LoadScene(1);
     }
-    void Btn_MainMenu()
+
+    private void HandleBtnMainMenuClick()
     {
         SceneManager.LoadScene(0);
     }
-    void Btn_Hint()
+
+    private void HandleBtnHintClick()
     {
         setting.showHints = !setting.showHints;
         MainHint();
@@ -190,11 +198,11 @@ public class GameManager : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Space)) SceneManager.LoadScene(gameObject.scene.name);
         else if (Input.GetKeyDown(KeyCode.Escape)) SceneManager.LoadScene(0);
-
     }
+
     #region //INITIALIZATON
 
-    void NewGameBoard()
+    private void NewGameBoard()
     {
         _skinCounter = setting.skinOrdinal;
         SkinChooser(false);
@@ -355,7 +363,7 @@ public class GameManager : MonoBehaviour
     /// Changes skin. Loads them from RESOURCES folder. Name of each folder that holds skin should be Skin0x, where 0x is number of skin.
     /// </summary>
     /// <param name="incrementSkin">Everything about skins is updated in this method. False just means to update all, but dont incrmenet to next skin. False is sed in initialization only. </param>
-    void SkinChooser(bool incrementSkin)
+    private void SkinChooser(bool incrementSkin)
     {
         if (incrementSkin)
         {
@@ -393,7 +401,7 @@ public class GameManager : MonoBehaviour
     /// </summary>
     /// <param name="prevLevel">Makes sure that next level is different prfom previous</param>
     /// <returns></returns>
-    int RandomLevel(int prevLevel)
+    private int RandomLevel(int prevLevel)
     {
         List<int> brojevi = Enumerable.Range(0, 23).ToList();
         brojevi.Remove(prevLevel);
@@ -402,7 +410,7 @@ public class GameManager : MonoBehaviour
         setting.level = list[0];
         return list[0];
     }
-    void InitializationMain(MainType mainType)
+    private void InitializationMain(MainType mainType)
     {
         int counter = 0;
         for (int j = 0; j < 3; j++)
@@ -441,7 +449,7 @@ public class GameManager : MonoBehaviour
     #endregion
 
     #region //HINT
-    void InitializationHint()
+    private void InitializationHint()
     {
         _hintElements = HelperScript.GetAllChildernByType<Transform>(parHintElements);
         int counter = 0;
@@ -456,7 +464,7 @@ public class GameManager : MonoBehaviour
 
         MainHint();
     }
-    void IniDic()
+    private void IniDic()
     {
         _allCombinations.Add(lay0);
         _allCombinations.Add(lay1);
@@ -533,20 +541,9 @@ public class GameManager : MonoBehaviour
         dic.Add(lay21, _directions[21]);
         dic.Add(lay22, _directions[22]);
         dic.Add(lay23, _directions[23]);
-
-        //foreach (KeyValuePair<int[], int[]> item in _mainPairs)
-        //{
-        //    print($"{item.Key[0]} {item.Value[0]}");
-        //}
-        //int counter = 0;
-        //foreach (KeyValuePair<int[], int[]> item in _mainPairs)
-        //{
-        //    dic.Add(item.Key, _directions[counter]);
-        //    counter++;
-        //}
     }
 
-    void MainHint()
+    private void MainHint()
     {
         HintDirection hintDirection = HintDirection.UpSwipe;
         foreach (KeyValuePair<int[], HintDirection> item in dic)
@@ -610,7 +607,8 @@ public class GameManager : MonoBehaviour
         if (!setting.showHints) ResetAllHints();
 
     }
-    void ResetAllHints()
+
+    private void ResetAllHints()
     {
         for (int i = 0; i < _hintElements.Length; i++)
         {
@@ -720,7 +718,7 @@ public class GameManager : MonoBehaviour
         return v2Int;
     }
 
-    void RecordPreviousVrijednost()
+    private void RecordPreviousVrijednost()
     {
         for (int i = 0; i < 3; i++)
         {
@@ -768,7 +766,7 @@ public class GameManager : MonoBehaviour
             .SetEase(izy);
     }
 
-    Vector2Int LimitVectorInt(Vector2Int v2Int)
+    private Vector2Int LimitVectorInt(Vector2Int v2Int)
     {
         Vector2Int vToLimit = v2Int;
         if (vToLimit.x > 2) vToLimit.x = 0;
@@ -779,7 +777,7 @@ public class GameManager : MonoBehaviour
         return vToLimit;
     }
 
-    void EndTweenDrag(bool updateHint)
+    private void EndTweenDrag(bool updateHint)
     {
         if (!_tweenOneHitCheck)
         {

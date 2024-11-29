@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -12,22 +11,35 @@ using FirstCollection;
 /// </summary>
 public class MainMenuManager : MonoBehaviour
 {
-    [SerializeField] SoSetting setting;
-    [SerializeField] Transform parEffects;
-    UITransitionEffect[] effects;
-    [SerializeField] Button btnPlay;
+    [SerializeField] private SoSetting setting;
+    [SerializeField] private Transform parEffects;
+    [SerializeField] private Button btnAdventure;
+    [SerializeField] private Button btnClassic;
+    [SerializeField] private GameObject mainMenuBackground;
+
+    private UITransitionEffect[] effects;
+    private static bool didPlayIntro = false;
 
     private void Start()
     {
+        btnAdventure.gameObject.SetActive(false);
+        btnClassic.gameObject.SetActive(false);
+
         setting.level = 0;
         setting.score = 0;
         setting.goodMoveStreak = 0;
         setting.xp = PlayerPrefs.GetInt("XP", 0);
         setting.LoadSecondAndThirdPhasePositions();
-        StartCoroutine(IntroSequence());
+
+        if(!didPlayIntro)
+            StartCoroutine(IntroSequence());
+        else
+        {
+            ShowMainMenu();
+        }
     }
 
-    IEnumerator IntroSequence()
+    private IEnumerator IntroSequence()
     {
         effects = HelperScript.GetAllChildernByType<UITransitionEffect>(parEffects);
         for (int i = 0; i < effects.Length; i++)
@@ -35,21 +47,40 @@ public class MainMenuManager : MonoBehaviour
             effects[i].gameObject.SetActive(true);
             effects[i].Show();
             yield return new WaitForSeconds(2);
-           // if(i < effects.Length - 1) effects[i].gameObject.SetActive(false);
         }
+
+        didPlayIntro = true;
+        ShowMainMenu();
+    }
+
+    private void ShowMainMenu()
+    {
+        mainMenuBackground.gameObject.SetActive(true);
+        btnAdventure.gameObject.SetActive(true);
+        btnClassic.gameObject.SetActive(true);
     }
 
     private void OnEnable()
     {
-        btnPlay.onClick.AddListener(Btn_Play);
+        btnAdventure.onClick.AddListener(HandleBtnAdventureClick);
+        btnClassic.onClick.AddListener(HandleBtnClassicClick);
     }
+
     private void OnDisable()
     {
-        btnPlay.onClick.RemoveListener(Btn_Play);
+        btnAdventure.onClick.RemoveListener(HandleBtnAdventureClick);
+        btnClassic.onClick.RemoveListener(HandleBtnClassicClick);
     }
-    void Btn_Play()
+
+    private void HandleBtnAdventureClick()
     {
         SceneManager.LoadScene(1);
+        StopAllCoroutines();
+    }
+
+    private void HandleBtnClassicClick()
+    {
+        SceneManager.LoadScene(2);
         StopAllCoroutines();
     }
 }
