@@ -3,7 +3,6 @@ using UnityEngine.UI;
 
 public class Token : MonoBehaviour
 {
-    private GameManager gm;
     [SerializeField] Image image;
     public int Value
     {
@@ -11,7 +10,7 @@ public class Token : MonoBehaviour
         set
         {
             this.value = value;
-            image.sprite = gm.settings.tokenSprites[this.value];
+            image.sprite = SoSetting.Instance.tokenSprites[this.value];
         }
     }
     private int value;
@@ -30,22 +29,41 @@ public class Token : MonoBehaviour
 
     private void Awake()
     {
-        gm = GameManager.Instance;
+        if(SoSetting.Instance.IsAdventureMode)
+        {
+            SetImageSize(image.GetComponent<RectTransform>(), 50f);
+        }
+        else
+        {
+            SetImageSize(image.GetComponent<RectTransform>(), 0f);
+        }
     }
 
-    void OnEnable()
+    private void OnEnable()
     {
         SquariconGlobalEvents.OnSkinUpdated += HandleSkinUpdated;
     }
 
-    void OnDisable()
+    private void OnDisable()
     {
         SquariconGlobalEvents.OnSkinUpdated -= HandleSkinUpdated;
     }
 
-    void HandleSkinUpdated()
+    private void HandleSkinUpdated()
     {
         // why this?
         Value = Value;
+    }
+
+    private void SetImageSize(RectTransform imageRectTransform, float value)
+    {
+        if (imageRectTransform == null)
+        {
+            Debug.LogError("Image RectTransform is null!");
+            return;
+        }
+
+        imageRectTransform.offsetMin = new Vector2(value, value); // Sets left and bottom
+        imageRectTransform.offsetMax = new Vector2(-value, -value); // Sets right and top
     }
 }

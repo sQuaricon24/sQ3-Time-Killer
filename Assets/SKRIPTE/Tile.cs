@@ -9,21 +9,26 @@ public class Tile : MonoBehaviour, IBeginDragHandler, IDragHandler, IPointerClic
 
     [SerializeField] private bool canBeDraged = true;
     [SerializeField] private Image image;
-    [SerializeField] private int pocetnaVrijednost;
+    [SerializeField] private int startingTileSpriteIndex;
     public AllowedDirection allowedDirection;
 
-    public int MyValue
+    private int tileSpriteIndex;
+    private Vector2Int myPosition;
+    private Vector2Int oppositePosition;
+    private Vector2 dragDelta;
+    private Vector2Int moveDir;
+
+    public int TileSpriteIndex
     {
-        get => myValue;
+        get => tileSpriteIndex;
         set
         {
-            myValue = value;
-            image.sprite = gm.settings.tileSprites[myValue];
+            tileSpriteIndex = value;
+            image.sprite = SoSetting.Instance.tileSprites[tileSpriteIndex];
         }
     }
-    private int myValue;
 
-    public Vector2Int MyPosition 
+    public Vector2Int MyPosition
     {
         get => myPosition;
         set
@@ -32,37 +37,6 @@ public class Tile : MonoBehaviour, IBeginDragHandler, IDragHandler, IPointerClic
             gameObject.name = $"Tile {myPosition.x} {myPosition.y}";
             oppositePosition = new Vector2Int((myPosition.x + 2) % 2, (myPosition.y + 2) % 2); //pogresno, ispraviti
         }
-    }
-    private Vector2Int myPosition;
-    private Vector2Int oppositePosition;
-
-    private Vector2 dragDelta;
-    private Vector2Int moveDir;
-
-
-    private void Awake()
-    {
-        gm = GameManager.Instance;
-    }
-
-    void Start()
-    {
-        MyValue = pocetnaVrijednost;
-    }
-
-    void OnEnable()
-    {
-        SquariconGlobalEvents.OnSkinUpdated += HandleSkinUpdated;
-    }
-
-    void OnDisable()
-    {
-        SquariconGlobalEvents.OnSkinUpdated -= HandleSkinUpdated;
-    }
-
-    void HandleSkinUpdated()
-    {
-        MyValue = MyValue;
     }
 
     public void OnBeginDrag(PointerEventData eventData)
@@ -92,7 +66,7 @@ public class Tile : MonoBehaviour, IBeginDragHandler, IDragHandler, IPointerClic
         gm.MoveTokenByPosition(moveDir, MyPosition);
 
         Vector2Int oppositePosition = gm.OppositePos(moveDir, MyPosition);
-        
+
         gm.MoveTokenByPosition(-moveDir, oppositePosition);
 
         gm.HandleMoveFinished();
@@ -100,13 +74,44 @@ public class Tile : MonoBehaviour, IBeginDragHandler, IDragHandler, IPointerClic
 
     public void OnDrag(PointerEventData eventData)
     {
-       
+
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
         if (allowedDirection != AllowedDirection.MiddlePoint) return;
-        gm.MiddlePointActivation(new Vector2Int(1,1));
+        gm.MiddlePointActivation(new Vector2Int(1, 1));
         gm.HandleMoveFinished();
+    }
+
+    private void Awake()
+    {
+        gm = GameManager.Instance;
+        if(SoSetting.Instance.IsAdventureMode)
+        {
+            Color c = image.color;
+            c.a = 0;
+            image.color = c;
+        }
+    }
+
+    void OnEnable()
+    {
+        SquariconGlobalEvents.OnSkinUpdated += HandleSkinUpdated;
+    }
+
+    void OnDisable()
+    {
+        SquariconGlobalEvents.OnSkinUpdated -= HandleSkinUpdated;
+    }
+
+    private void Start()
+    {
+        TileSpriteIndex = startingTileSpriteIndex;
+    }
+
+    private void HandleSkinUpdated()
+    {
+        TileSpriteIndex = TileSpriteIndex;
     }
 }

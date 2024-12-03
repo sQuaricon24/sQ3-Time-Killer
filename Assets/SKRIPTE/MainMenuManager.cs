@@ -11,7 +11,6 @@ using FirstCollection;
 /// </summary>
 public class MainMenuManager : MonoBehaviour
 {
-    [SerializeField] private SoSetting setting;
     [SerializeField] private Transform parEffects;
     [SerializeField] private Button btnAdventure;
     [SerializeField] private Button btnClassic;
@@ -19,9 +18,12 @@ public class MainMenuManager : MonoBehaviour
 
     private UITransitionEffect[] effects;
     private static bool didPlayIntro = false;
+    SoSetting setting; 
 
     private void Start()
     {
+        setting = SoSetting.Instance;
+
         btnAdventure.gameObject.SetActive(false);
         btnClassic.gameObject.SetActive(false);
 
@@ -74,13 +76,15 @@ public class MainMenuManager : MonoBehaviour
 
     private void HandleBtnAdventureClick()
     {
+        SoSetting.Instance.SetAdventureMode(true);
         SceneManager.LoadScene(1);
         StopAllCoroutines();
     }
 
     private void HandleBtnClassicClick()
     {
-        SceneManager.LoadScene(2);
+        SoSetting.Instance.SetAdventureMode(false);
+        SceneManager.LoadScene(1);
         StopAllCoroutines();
     }
 }

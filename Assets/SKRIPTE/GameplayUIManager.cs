@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -8,40 +9,61 @@ using UnityEngine.UI;
 public class GameplayUIManager : MonoBehaviour
 {
     private const int CONST_SKINMAX = 4; //number of skin folders in Resources folder
-
-    [SerializeField] public SoSetting settings;
+    private const string SKIN_NAME_PREFIX = "Skin";
+    private const string DEFAULT_SKIN_FOLDER_NAME = "Skin00";
+    private const string ADVENTURE_SKIN_FOLDER_NAME = "SkinAdventure";
 
     [SerializeField] private Button btnBack;
     [SerializeField] private TextMeshProUGUI scoreText;
     [SerializeField] private TextMeshProUGUI xpText;
 
-    [SerializeField] GameObject levelDoneGO;
-    [SerializeField] Button[] btnLevelDone;
-    [SerializeField] Button btnSkin, btnHint;
+    [SerializeField] private GameObject levelDoneGO;
+    [SerializeField] private Button[] btnLevelDone;
+    [SerializeField] private Button btnSkin, btnHint;
 
-    [SerializeField] GameObject goodMoveMarker;
-    [SerializeField] GameObject wrongMoveMarker;
+    [SerializeField] private GameObject goodMoveMarker;
+    [SerializeField] private GameObject wrongMoveMarker;
 
-    [SerializeField] Color[] skinColors;
-    [SerializeField] Image[] imageToColorSkin;
-    [SerializeField] TextMeshProUGUI textToColorSkin;
+    [SerializeField] private Image backgroundImageAdventureMode;
+    [SerializeField] private Image backgroundImageClassicMode;
+    [SerializeField] private Image adventureModeCenterImage;
 
-    private int skinCounter = 0;
+    [SerializeField] private Color[] skinColors;
+    [SerializeField] private TextMeshProUGUI textToColorSkin;
+
+    [SerializeField] private List<Color> backgroundColors;
+
+    private bool didLoadTokenSpritesForAdventureMode = false;
+    private SoSetting settings;
 
     private void OnEnable()
     {
+        settings = SoSetting.Instance;
         scoreText.text = settings.score.ToString();
         xpText.text = settings.xp.ToString();
-        SquariconGlobalEvents.OnLevelFinished += Ev_LevelDone;
+
+        backgroundImageAdventureMode.gameObject.SetActive(false);
+        backgroundImageClassicMode.gameObject.SetActive(false);
+        adventureModeCenterImage.gameObject.SetActive(false);
+
+        if (settings.IsAdventureMode)
+        {
+            backgroundImageAdventureMode.gameObject.SetActive(true);
+            adventureModeCenterImage.gameObject.SetActive(true);
+        }
+        else
+            backgroundImageClassicMode.gameObject.SetActive(true);
+
         btnLevelDone[0].onClick.AddListener(HandleBtnNextLevelClick);
         btnLevelDone[1].onClick.AddListener(HandleBtnMainMenuClick);
         btnBack.onClick.AddListener(HandleBtnMainMenuClick);
         btnSkin.onClick.AddListener(delegate
         {
-            SkinChooser(true);
+            IncrementAndLoadSkin();
         });
         btnHint.onClick.AddListener(HandleBtnHintClick);
 
+        SquariconGlobalEvents.OnLevelFinished += HandleLevelFinished;
         SquariconGlobalEvents.OnLevelStarted += HandleLevelStarted;
         SquariconGlobalEvents.OnGoodMoveHappened += HandleGoodMoveHappened;
         SquariconGlobalEvents.OnBadMoveHappened += HandleBadMoveHappened;
@@ -50,13 +72,13 @@ public class GameplayUIManager : MonoBehaviour
 
     private void OnDisable()
     {
-        SquariconGlobalEvents.OnLevelFinished -= Ev_LevelDone;
         btnLevelDone[0].onClick.RemoveListener(HandleBtnNextLevelClick);
         btnLevelDone[1].onClick.RemoveListener(HandleBtnMainMenuClick);
         btnBack.onClick.RemoveListener(HandleBtnMainMenuClick);
         btnSkin.onClick.RemoveAllListeners();
         btnHint.onClick.RemoveListener(HandleBtnHintClick);
 
+        SquariconGlobalEvents.OnLevelFinished -= HandleLevelFinished;
         SquariconGlobalEvents.OnLevelStarted -= HandleLevelStarted;
         SquariconGlobalEvents.OnGoodMoveHappened -= HandleGoodMoveHappened;
         SquariconGlobalEvents.OnBadMoveHappened -= HandleBadMoveHappened;
@@ -65,9 +87,8 @@ public class GameplayUIManager : MonoBehaviour
 
     private void HandleLevelStarted()
     {
-        SkinChooser(incrementSkin: false);
+        LoadCurrentSkin();
     }
-
 
     private void HandleBadMoveHappened()
     {
@@ -79,12 +100,10 @@ public class GameplayUIManager : MonoBehaviour
         StartCoroutine(ShowMarkerThenHideItAfterSeconds(goodMoveMarker, 3f));
     }
 
-    private void Ev_LevelDone(int lv)
+    private void HandleLevelFinished()
     {
-        skinCounter = settings.skinOrdinal;
-
         SquariconGlobalEvents.OnResetAllHints?.Invoke();
-        //ResetAllHints();
+
         //tweenFinishedCounter = 100;
         settings.level += 1;
 
@@ -115,47 +134,60 @@ public class GameplayUIManager : MonoBehaviour
     {
         settings.showHints = !settings.showHints;
         SquariconGlobalEvents.OnMainHint?.Invoke();
-        //MainHint();
     }
 
-    /// <summary>
-    /// Changes skin. Loads them from RESOURCES folder. Name of each folder that holds skin should be Skin0x, where 0x is number of skin.
-    /// </summary>
-    /// <param name="incrementSkin">Everything about skins is updated in this method. False just means to update all, but dont incrmenet to next skin. False is sed in initialization only. </param>
-    private void SkinChooser(bool incrementSkin)
-    {
-        if (incrementSkin)
-        {
-            skinCounter = (1 + skinCounter) % CONST_SKINMAX;
-            settings.skinOrdinal = skinCounter;
-        }
-        settings.tileSprites.Clear();
-        settings.tokenSprites.Clear();
+    private void LoadCurrentSkin()
+    {   
+        string skinFolderName = "";
 
-        string dec = settings.skinOrdinal < 10 ? "0" : "";
-        string folderName = "Skin" + dec + settings.skinOrdinal.ToString();
-        Sprite[] allSprites = Resources.LoadAll<Sprite>(folderName);
-        if (allSprites == null || allSprites.Length <= 0)
+        if (settings.IsAdventureMode)
+        {
+            backgroundImageAdventureMode.color = backgroundColors[settings.CurrentSkinIndex];
+            if (!didLoadTokenSpritesForAdventureMode)
+            {
+                skinFolderName = ADVENTURE_SKIN_FOLDER_NAME;
+                didLoadTokenSpritesForAdventureMode = true;
+            }
+            else
+            {
+                return;
+            }
+        }
+        else
+        {
+            string skinSuffix = settings.CurrentSkinIndex < 10 ? "0" : "";
+            skinSuffix += settings.CurrentSkinIndex.ToString();
+            skinFolderName = SKIN_NAME_PREFIX + skinSuffix;
+        }
+
+        Sprite[] skinSprites = Resources.LoadAll<Sprite>(skinFolderName);
+        if (skinSprites == null || skinSprites.Length <= 0)
         {
             Debug.Log("Can't find skin, returning default skin");
-            allSprites = Resources.LoadAll<Sprite>("Skin00");
-        }
-        for (int i = 0; i < allSprites.Length; i++)
-        {
-            if (i % 2 == 0) settings.tileSprites.Add(allSprites[i]);
-            else settings.tokenSprites.Add(allSprites[i]);
+            skinSprites = Resources.LoadAll<Sprite>(DEFAULT_SKIN_FOLDER_NAME);
         }
 
-        SquariconGlobalEvents.OnSkinUpdated?.Invoke();
-
-        /*
-        for (int i = 0; i < imageToColorSkin.Length; i++)
+        settings.tileSprites.Clear();
+        settings.tokenSprites.Clear();
+        for (int i = 0; i < skinSprites.Length; i++)
         {
-            imageToColorSkin[i].color = skinColors[skinCounter];
-        }*/
+            if (i % 2 == 0) settings.tileSprites.Add(skinSprites[i]);
+            else settings.tokenSprites.Add(skinSprites[i]);
+        }
 
-        textToColorSkin.color = skinColors[skinCounter];
+        //textToColorSkin.color = skinColors[settings.CurrentSkinIndex];
 
+        SquariconGlobalEvents.OnSkinUpdated?.Invoke();        
+    }
+
+    private void IncrementAndLoadSkin()
+    {
+        int newSkinIndex = settings.CurrentSkinIndex + 1;
+        if (newSkinIndex >= CONST_SKINMAX)
+            newSkinIndex = 0;
+
+        settings.CurrentSkinIndex = newSkinIndex;
+        LoadCurrentSkin();
     }
 
     private IEnumerator ShowMarkerThenHideItAfterSeconds(GameObject markerObject, float seconds)
@@ -173,5 +205,4 @@ public class GameplayUIManager : MonoBehaviour
         scoreText.text = settings.score.ToString();
         xpText.text = settings.xp.ToString();
     }
-
 }

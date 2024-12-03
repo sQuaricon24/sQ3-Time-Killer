@@ -11,7 +11,6 @@ public partial class GameManager : MonoBehaviour
 
     public static GameManager Instance;
 
-    [SerializeField] public SoSetting settings;
     [SerializeField] Transform kanvas;
     [SerializeField] Transform parTile, parToken, parPositions, parTileReplace, parTokenReplace;
     [SerializeField] List<int> movesToWinList;
@@ -34,7 +33,6 @@ public partial class GameManager : MonoBehaviour
 
     private int tweenFinishedCounter = 0; // inputs (drags) are disabled until tween finishes. Int is used instead of bool beacuse MoveToken is called twice per drag.
     private bool isTweenOneHit = true; // tween are called 6+ times and they all OnComplete(EndTween). That method should be called once, not 6 times.
-
 
     public static Vector2Int[,] CurrCoordinates = new Vector2Int[3, 3];
     private Vector2Int[,] prevCoordinates = new Vector2Int[3, 3];
@@ -102,7 +100,7 @@ public partial class GameManager : MonoBehaviour
         IniDic();
 
         // current position from 23 possible positions
-        currentPositionIndex = settings.GetPositionForLevelAndScore(settings.level,settings.score);
+        currentPositionIndex = SoSetting.Instance.GetPositionForLevelAndScore(SoSetting.Instance.level, SoSetting.Instance.score);
 
         Tokens[1, 0].Value = Tokens[1, 2].Value = allCombinations[currentPositionIndex][0];
         Tokens[2, 0].Value = Tokens[0, 2].Value = allCombinations[currentPositionIndex][1];
@@ -147,62 +145,48 @@ public partial class GameManager : MonoBehaviour
 
         if (newMovesToWin < currentMovesToWin)
         {
-            settings.goodMoveStreak++;
-            settings.xp += GetXpForWinStreak(settings.goodMoveStreak);
-            settings.AddScore(GetScoreForWinStreak(settings.goodMoveStreak));
-            PlayerPrefs.SetInt("XP", settings.xp);
+            SoSetting.Instance.goodMoveStreak++;
+            SoSetting.Instance.xp += GetXpForWinStreak(SoSetting.Instance.goodMoveStreak);
+            SoSetting.Instance.AddScore(GetScoreForWinStreak(SoSetting.Instance.goodMoveStreak));
+            PlayerPrefs.SetInt("XP", SoSetting.Instance.xp);
 
             SquariconGlobalEvents.OnScoreUpdated?.Invoke();
             SquariconGlobalEvents.OnGoodMoveHappened?.Invoke();
         }
         else
         {
-            settings.goodMoveStreak = 0;
+            SoSetting.Instance.goodMoveStreak = 0;
             SquariconGlobalEvents.OnBadMoveHappened?.Invoke();
         }
 
         currentMovesToWin = newMovesToWin;
     }
 
-    private int GetScoreForWinStreak(int streak)
-    {
-        switch(streak)
-        {
-            case (0):
-                return 0;
-            case (1):
-                return 0;
-            case (2):
-                return 10;
-            case (3):
-                return 20;
-            case (4):
-                return 40;
-            case (5):
-                return 80;
-            default:
-                return 80;
-        }
-    }
-
     private int GetXpForWinStreak(int streak)
     {
         switch (streak)
         {
-            case (0):
-                return 0;
-            case (1):
-                return 5;
-            case (2):
-                return 10;
-            case (3):
-                return 20;
-            case (4):
-                return 40;
-            case (5):
-                return 80;
-            default:
-                return 80;
+            case 0: return 0;
+            case 1: return 5;
+            case 2: return 10;
+            case 3: return 20;
+            case 4: return 40;
+            case 5: return 80;
+            default: return 80;
+        }
+    }
+
+    private int GetScoreForWinStreak(int streak)
+    {
+        switch (streak)
+        {
+            case 0: return 0;
+            case 1: return 0;
+            case 2: return 10;
+            case 3: return 20;
+            case 4: return 40;
+            case 5: return 80;
+            default: return 80;
         }
     }
 
@@ -423,13 +407,21 @@ public partial class GameManager : MonoBehaviour
         return v2Int;
     }
 
+    public void HandleResetProgresClick()
+    {
+        SoSetting.Instance.score = 0;
+        SoSetting.Instance.xp = 0;
+        SoSetting.Instance.goodMoveStreak = 0;
+        SquariconGlobalEvents.OnScoreUpdated();
+    }
+
     private void RecordPreviousValue()
     {
         for (int i = 0; i < 3; i++)
         {
             for (int j = 0; j < 3; j++)
             {
-                prevTileValues[i, j] = tiles[i, j].MyValue;
+                prevTileValues[i, j] = tiles[i, j].TileSpriteIndex;
                 prevTokenValues[i, j] = Tokens[i, j].Value;
                 prevCoordinates[i, j] = CurrCoordinates[i, j];
             }

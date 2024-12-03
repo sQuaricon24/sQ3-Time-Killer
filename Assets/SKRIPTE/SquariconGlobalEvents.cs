@@ -4,7 +4,7 @@ using UnityEngine;
 public class SquariconGlobalEvents : MonoBehaviour
 {
     public static Action OnLevelStarted = null;
-    public static Action<int> OnLevelFinished;
+    public static Action OnLevelFinished;
     public static Action OnSkinUpdated;
 
     public static Action OnResetAllHints = null;

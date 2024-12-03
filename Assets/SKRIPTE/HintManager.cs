@@ -1,12 +1,10 @@
 using FirstCollection;
 using System.Collections.Generic;
 using UnityEngine;
-using static UnityEditor.Experimental.GraphView.GraphView;
 
 public class HintManager : MonoBehaviour
 {
     [SerializeField] Transform parTile, parToken, parPositions, parTileReplace, parTokenReplace, parHintElements;
-    [SerializeField] private SoSetting settings;
 
     private Transform[] hintElements;
     private bool isLevelDone;
@@ -158,11 +156,11 @@ public class HintManager : MonoBehaviour
                 hintElements[2].gameObject.SetActive(true);
                 break;
             case HintDirection.None:
-                if (!isLevelDone) SquariconGlobalEvents.OnLevelFinished?.Invoke(settings.level);
+                if (!isLevelDone) SquariconGlobalEvents.OnLevelFinished?.Invoke();
                 isLevelDone = true;
                 break;
         }
-        if (!settings.showHints) ResetAllHints();
+        if (!SoSetting.Instance.showHints) ResetAllHints();
 
     }
 
