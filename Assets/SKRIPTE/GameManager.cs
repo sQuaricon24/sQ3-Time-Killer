@@ -4,14 +4,19 @@ using FirstCollection;
 using DG.Tweening;
 using UnityEngine.SceneManagement;
 using System.Linq;
+using UnityEngine.UI;
 
 public partial class GameManager : MonoBehaviour
 {
     private const float CONST_TWEENDURATION = 1f;
 
     public static GameManager Instance;
+    // temporary solution to check if token is on correct place, list index values represent the board
+    [SerializeField] private List<Sprite> correctSpriteList;
 
     [SerializeField] Transform kanvas;
+    [SerializeField] private Button undoBtn;
+    [SerializeField] private Button redoBtn;
     [SerializeField] Transform parTile, parToken, parPositions, parTileReplace, parTokenReplace;
     [SerializeField] List<int> movesToWinList;
     [SerializeField] private Ease easingType;
@@ -30,6 +35,41 @@ public partial class GameManager : MonoBehaviour
     private int currentMovesToWin = -1;
     private int currentPositionIndex = -1;
     private int previousPositionIndex = -1;
+    private int PreviousPositionIndex
+    {
+        get { return previousPositionIndex; }
+        set
+        {
+            previousPositionIndex = value;
+            if(previousPositionIndex == CurrentPositionIndex)
+            {
+                undoBtn.gameObject.SetActive(false);
+                redoBtn.gameObject.SetActive(false);
+            }
+            else
+            {
+                undoBtn.gameObject.SetActive(true);
+            }
+        }
+    }
+
+    private int CurrentPositionIndex
+    {
+        get { return currentPositionIndex; }
+        set
+        {
+            currentPositionIndex = value;
+            if (previousPositionIndex == currentPositionIndex || currentPositionIndex == 0)
+            {
+                undoBtn.gameObject.SetActive(false);
+                redoBtn.gameObject.SetActive(false);
+            }
+            else
+            {
+                undoBtn.gameObject.SetActive(true);
+            }
+        }
+    }
 
     private int tweenFinishedCounter = 0; // inputs (drags) are disabled until tween finishes. Int is used instead of bool beacuse MoveToken is called twice per drag.
     private bool isTweenOneHit = true; // tween are called 6+ times and they all OnComplete(EndTween). That method should be called once, not 6 times.
@@ -72,6 +112,10 @@ public partial class GameManager : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        undoBtn.gameObject.SetActive(false);
+        redoBtn.gameObject.SetActive(false);
+        undoBtn.onClick.AddListener(() => HandleUndoClick());
+        redoBtn.onClick.AddListener(() => HandleRedoClick());
     }
 
     private void Start()
@@ -100,13 +144,18 @@ public partial class GameManager : MonoBehaviour
         IniDic();
 
         // current position from 23 possible positions
-        currentPositionIndex = SoSetting.Instance.GetPositionForLevelAndScore(SoSetting.Instance.level, SoSetting.Instance.score);
+        CurrentPositionIndex = SoSetting.Instance.GetPositionForLevelAndScore(SoSetting.Instance.level, SoSetting.Instance.score);
+        PreviousPositionIndex = CurrentPositionIndex;
 
         Tokens[1, 0].Value = Tokens[1, 2].Value = allCombinations[currentPositionIndex][0];
         Tokens[2, 0].Value = Tokens[0, 2].Value = allCombinations[currentPositionIndex][1];
         Tokens[0, 0].Value = Tokens[2, 2].Value = allCombinations[currentPositionIndex][2];
         Tokens[0, 1].Value = Tokens[2, 1].Value = allCombinations[currentPositionIndex][3];
         currentMovesToWin = GetMovesToWinForPositionIndex(currentPositionIndex);
+        if (SoSetting.Instance.IsAdventureMode)
+        {
+            AnimateTokensForAdventureModeFadeInOut();
+        }
         SquariconGlobalEvents.OnInitializationHint?.Invoke();
     }
 
@@ -132,13 +181,85 @@ public partial class GameManager : MonoBehaviour
         return movesToWinList[positionIndex];
     }
 
+    private void HandleUndoClick()
+    {
+        if (PreviousPositionIndex != CurrentPositionIndex)
+        {
+            // Swap the current and previous indices
+            int temp = CurrentPositionIndex;
+            CurrentPositionIndex = PreviousPositionIndex;
+            PreviousPositionIndex = temp;
+
+            // Update the tokens and moves based on the new current position
+            UpdateBoardToCurrentPosition();
+            Debug.Log("Undo successful. Current position: " + currentPositionIndex);
+
+            SquariconGlobalEvents.OnResetAllHints?.Invoke();
+            SquariconGlobalEvents.OnMainHint?.Invoke();
+
+            redoBtn.gameObject.SetActive(true);
+            undoBtn.gameObject.SetActive(false);
+        }
+        else
+        {
+            Debug.LogWarning("No move to undo.");
+        }
+    }
+
+    private void HandleRedoClick()
+    {
+        if (PreviousPositionIndex != CurrentPositionIndex)
+        {
+
+            // Swap the current and previous indices back
+            int temp = PreviousPositionIndex;
+            PreviousPositionIndex = CurrentPositionIndex;
+            CurrentPositionIndex = temp;
+
+            // Update the tokens and moves based on the restored current position
+            UpdateBoardToCurrentPosition();
+            Debug.Log("Redo successful. Current position: " + currentPositionIndex);
+
+            SquariconGlobalEvents.OnResetAllHints?.Invoke();
+            SquariconGlobalEvents.OnMainHint?.Invoke();
+
+            redoBtn.gameObject.SetActive(false);
+            undoBtn.gameObject.SetActive(true);
+        }
+        else
+        {
+            Debug.LogWarning("No move to redo.");
+        }
+    }
+
+    private void UpdateBoardToCurrentPosition()
+    {
+        // Updates the token values based on the currentPositionIndex
+        Tokens[1, 0].Value = Tokens[1, 2].Value = allCombinations[currentPositionIndex][0];
+        Tokens[2, 0].Value = Tokens[0, 2].Value = allCombinations[currentPositionIndex][1];
+        Tokens[0, 0].Value = Tokens[2, 2].Value = allCombinations[currentPositionIndex][2];
+        Tokens[0, 1].Value = Tokens[2, 1].Value = allCombinations[currentPositionIndex][3];
+
+        // Update moves left to win
+        currentMovesToWin = GetMovesToWinForPositionIndex(currentPositionIndex);
+
+        // Trigger animations or visual updates if needed
+        if (SoSetting.Instance.IsAdventureMode)
+        {
+            AnimateTokensForAdventureModeFadeInOut();
+        }
+
+        // Notify other systems about the state change
+        SquariconGlobalEvents.OnScoreUpdated?.Invoke();
+    }
+
     public void HandleMoveFinished()
     {
         int newPosition = GetPositionIndexFromCurrentVrijednost();
         int newMovesToWin = GetMovesToWinForPositionIndex(newPosition);
 
-        previousPositionIndex = currentPositionIndex;
-        currentPositionIndex = newPosition;
+        PreviousPositionIndex = CurrentPositionIndex;
+        CurrentPositionIndex = newPosition;
 
         //DebugCurrentAndPreviousPosition();
 
@@ -160,6 +281,11 @@ public partial class GameManager : MonoBehaviour
         }
 
         currentMovesToWin = newMovesToWin;
+
+        if(SoSetting.Instance.IsAdventureMode)
+        {
+            AnimateTokensForAdventureModeFadeInOut();
+        }
     }
 
     private int GetXpForWinStreak(int streak)
@@ -190,12 +316,63 @@ public partial class GameManager : MonoBehaviour
         }
     }
 
+    private void AnimateTokensForAdventureModeFadeInOut()
+    {
+        //Debug.LogError("TOKEN 0,0: " + Tokens[0, 0].ImageName);
+        
+        if (Tokens[0, 0].ImageName != correctSpriteList[0].name)
+        {
+            Tokens[0, 0].FadeIn();
+            Tokens[2, 2].FadeIn();
+        }
+        else
+        {
+            Tokens[0, 0].FadeOut();
+            Tokens[2, 2].FadeOut();
+        }
+        ////////////////////////////////////////////////////////////////////////////////////////
+        if (Tokens[1, 0].ImageName != correctSpriteList[1].name)
+        {
+            Tokens[1, 0].FadeIn();
+            Tokens[1, 2].FadeIn();
+        }
+        else
+        {
+            Tokens[1, 0].FadeOut();
+            Tokens[1, 2].FadeOut();
+        }
+        ////////////////////////////////////////////////////////////////////////////////////////
+        if (Tokens[2, 0].ImageName != correctSpriteList[2].name)
+        {
+            Tokens[2, 0].FadeIn();
+            Tokens[0, 2].FadeIn();
+        }
+        else
+        {
+            Tokens[2, 0].FadeOut();
+            Tokens[0, 2].FadeOut();
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////////////
+        if (Tokens[0, 1].ImageName != correctSpriteList[3].name)
+        {
+            Tokens[0, 1].FadeIn();
+            Tokens[2, 1].FadeIn();
+        }
+        else
+        {
+            Tokens[0, 1].FadeOut();
+            Tokens[2, 1].FadeOut();
+        }
+    }
+
     private void DebugCurrentAndPreviousPosition()
     {
+        /*
         Tokens[1, 0].Value = Tokens[1, 2].Value = allCombinations[currentPositionIndex][0];
         Tokens[2, 0].Value = Tokens[0, 2].Value = allCombinations[currentPositionIndex][1];
         Tokens[0, 0].Value = Tokens[2, 2].Value = allCombinations[currentPositionIndex][2];
-        Tokens[0, 1].Value = Tokens[2, 1].Value = allCombinations[currentPositionIndex][3];
+        Tokens[0, 1].Value = Tokens[2, 1].Value = allCombinations[currentPositionIndex][3];*/
 
         Debug.LogError("PREV POS INDEX " + previousPositionIndex);
         if(previousPositionIndex >= 0)

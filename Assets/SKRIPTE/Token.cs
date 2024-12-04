@@ -1,9 +1,48 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
+using DG.Tweening;
 
 public class Token : MonoBehaviour
 {
-    [SerializeField] Image image;
+    [SerializeField] private int tokenID;
+    [SerializeField] private Image image;
+    public string ImageName => image.sprite.name;
+    public int ID => tokenID;
+
+    public void FadeIn()
+    {
+        ScaleIn();
+        return;
+        Color c = image.color;
+        c.a = 255;
+        image.color = c;
+    }
+
+    public void FadeOut()
+    {
+        ScaleOut();
+        return;
+        Color c = image.color;
+        c.a = 0;
+        image.color = c;
+    }
+
+    private RectTransform targetTransform; // Assign the RectTransform of the UI element
+
+    public void ScaleIn()
+    {
+        // Scale to 1 (full size)
+        targetTransform.DOScale(Vector3.one, 0.5f).SetEase(Ease.OutBack); // You can adjust duration and easing
+    }
+
+    public void ScaleOut()
+    {
+        // Scale to 0 (hidden)
+        targetTransform.DOScale(Vector3.zero, 0.5f).SetEase(Ease.InBack); // You can adjust duration and easing
+    }
+
+
     public int Value
     {
         get => value;
@@ -29,13 +68,14 @@ public class Token : MonoBehaviour
 
     private void Awake()
     {
-        if(SoSetting.Instance.IsAdventureMode)
+        targetTransform = image.GetComponent<RectTransform>();
+        if (SoSetting.Instance.IsAdventureMode)
         {
-            SetImageSize(image.GetComponent<RectTransform>(), 50f);
+            SetImageSize(targetTransform, 50f);
         }
         else
         {
-            SetImageSize(image.GetComponent<RectTransform>(), 0f);
+            SetImageSize(targetTransform, 0f);
         }
     }
 
