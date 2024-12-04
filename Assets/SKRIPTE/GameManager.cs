@@ -154,7 +154,7 @@ public partial class GameManager : MonoBehaviour
         currentMovesToWin = GetMovesToWinForPositionIndex(currentPositionIndex);
         if (SoSetting.Instance.IsAdventureMode)
         {
-            AnimateTokensForAdventureModeFadeInOut();
+            AnimateTokensAppearOrDissapear();
         }
         SquariconGlobalEvents.OnInitializationHint?.Invoke();
     }
@@ -183,19 +183,32 @@ public partial class GameManager : MonoBehaviour
 
     private void HandleUndoClick()
     {
+        if (isDragActive)
+            return;
+
         if (PreviousPositionIndex != CurrentPositionIndex)
         {
-            // Swap the current and previous indices
-            int temp = CurrentPositionIndex;
-            CurrentPositionIndex = PreviousPositionIndex;
-            PreviousPositionIndex = temp;
+            if (doAnimateUndoRedo)
+            {
+                if (isLatestActionMiddlePointActivation)
+                {
+                    MiddlePointActivation(new Vector2Int(1, 1));
+                    HandleMoveFinished();
+                }
+                else
+                    SimulateReverseDrag(previousMoveDir, previousPoz);
+            }
+            else
+            {
+                // Swap the current and previous indices
+                int temp = CurrentPositionIndex;
+                CurrentPositionIndex = PreviousPositionIndex;
+                PreviousPositionIndex = temp;
 
-            // Update the tokens and moves based on the new current position
-            UpdateBoardToCurrentPosition();
-            Debug.Log("Undo successful. Current position: " + currentPositionIndex);
-
-            SquariconGlobalEvents.OnResetAllHints?.Invoke();
-            SquariconGlobalEvents.OnMainHint?.Invoke();
+                UpdateBoardToCurrentPosition();
+                SquariconGlobalEvents.OnResetAllHints?.Invoke();
+                SquariconGlobalEvents.OnMainHint?.Invoke();
+            }
 
             redoBtn.gameObject.SetActive(true);
             undoBtn.gameObject.SetActive(false);
@@ -206,22 +219,38 @@ public partial class GameManager : MonoBehaviour
         }
     }
 
+    private bool doAnimateUndoRedo = true;
+
     private void HandleRedoClick()
     {
+        if (isDragActive)
+            return;
+
         if (PreviousPositionIndex != CurrentPositionIndex)
         {
-
-            // Swap the current and previous indices back
-            int temp = PreviousPositionIndex;
-            PreviousPositionIndex = CurrentPositionIndex;
-            CurrentPositionIndex = temp;
-
             // Update the tokens and moves based on the restored current position
-            UpdateBoardToCurrentPosition();
-            Debug.Log("Redo successful. Current position: " + currentPositionIndex);
+            if(doAnimateUndoRedo)
+            {
+                if (isLatestActionMiddlePointActivation)
+                {
+                    MiddlePointActivation(new Vector2Int(1, 1));
+                    HandleMoveFinished();
+                }
+                else
+                    SimulateReverseDrag(previousMoveDir, previousPoz);
+            }
+            else
+            {
+                // Swap the current and previous indices back
+                int temp = PreviousPositionIndex;
+                PreviousPositionIndex = CurrentPositionIndex;
+                CurrentPositionIndex = temp;
 
-            SquariconGlobalEvents.OnResetAllHints?.Invoke();
-            SquariconGlobalEvents.OnMainHint?.Invoke();
+                UpdateBoardToCurrentPosition();
+                SquariconGlobalEvents.OnResetAllHints?.Invoke();
+                SquariconGlobalEvents.OnMainHint?.Invoke();
+            }
+            Debug.Log("Redo successful. Current position: " + currentPositionIndex);
 
             redoBtn.gameObject.SetActive(false);
             undoBtn.gameObject.SetActive(true);
@@ -230,6 +259,17 @@ public partial class GameManager : MonoBehaviour
         {
             Debug.LogWarning("No move to redo.");
         }
+    }
+
+    private void SimulateReverseDrag(Vector2Int moveDir, Vector2Int poz)
+    {
+        MoveTokenByPosition(moveDir, poz);
+
+        Vector2Int oppositePosition = OppositePos(moveDir, poz);
+
+        MoveTokenByPosition(-moveDir, oppositePosition);
+
+        HandleMoveFinished();
     }
 
     private void UpdateBoardToCurrentPosition()
@@ -246,7 +286,7 @@ public partial class GameManager : MonoBehaviour
         // Trigger animations or visual updates if needed
         if (SoSetting.Instance.IsAdventureMode)
         {
-            AnimateTokensForAdventureModeFadeInOut();
+            AnimateTokensAppearOrDissapear();
         }
 
         // Notify other systems about the state change
@@ -284,7 +324,7 @@ public partial class GameManager : MonoBehaviour
 
         if(SoSetting.Instance.IsAdventureMode)
         {
-            AnimateTokensForAdventureModeFadeInOut();
+            AnimateTokensAppearOrDissapear();
         }
     }
 
@@ -316,7 +356,7 @@ public partial class GameManager : MonoBehaviour
         }
     }
 
-    private void AnimateTokensForAdventureModeFadeInOut()
+    private void AnimateTokensAppearOrDissapear()
     {
         //Debug.LogError("TOKEN 0,0: " + Tokens[0, 0].ImageName);
         
@@ -487,10 +527,24 @@ public partial class GameManager : MonoBehaviour
         mainPairs.Add(lay23, lay19);
     }
 
+    private Vector2Int previousMoveDir;
+    private Vector2Int previousPoz;
+
+    private Vector2Int currentMoveDir;
+    private Vector2Int currentPoz;
+
     //#region//MAIN MECHANICS
     public void MoveTokenByPosition(Vector2Int moveDir, Vector2Int poz)
     {
         if (tweenFinishedCounter > 1) return;
+
+        isLatestActionMiddlePointActivation = false;
+        previousMoveDir = currentMoveDir * -1;
+        previousPoz = currentPoz;
+        currentMoveDir = moveDir;
+        currentPoz = poz;
+        isDragActive = true;
+
         tweenFinishedCounter++;
         isTweenOneHit = false;
         RecordPreviousValue();
@@ -605,11 +659,17 @@ public partial class GameManager : MonoBehaviour
         }
     }
 
+    private bool isLatestActionMiddlePointActivation = false;
     public void MiddlePointActivation(Vector2Int poz)
     {
         if (tweenFinishedCounter > 0) return;
         tweenFinishedCounter = 100;
         isTweenOneHit = false;
+
+        isLatestActionMiddlePointActivation = true;
+        previousPoz = currentPoz;
+        currentPoz = poz;
+        isDragActive = true;
 
         RecordPreviousValue();
         SquariconGlobalEvents.OnResetAllHints?.Invoke();
@@ -650,6 +710,7 @@ public partial class GameManager : MonoBehaviour
         return vToLimit;
     }
 
+    private bool isDragActive = false;
     private void EndTweenDrag()
     {
         if (!isTweenOneHit)
@@ -665,6 +726,7 @@ public partial class GameManager : MonoBehaviour
             substituteTokens[i].gameObject.SetActive(false);
         }
 
+        isDragActive = false;
         SquariconGlobalEvents.OnMainHint?.Invoke();
     }
 }
