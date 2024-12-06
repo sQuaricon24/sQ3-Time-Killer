@@ -62,6 +62,8 @@ public class TokenController : MonoBehaviour, IDragHandler, IBeginDragHandler, I
                 lockedDirection = Vector2.up;
                 isDirectionLocked = true;
             }
+
+            GridManager.Instance.HandleBeginDrag(draggedToken: this, isVerticalDrag: lockedDirection == Vector2.up);
         }
 
         // Apply constraints based on the locked direction
@@ -76,12 +78,33 @@ public class TokenController : MonoBehaviour, IDragHandler, IBeginDragHandler, I
             newPosition.x = dragStartPosition.x; // Lock horizontal position
         }
 
-        rectTransform.localPosition = newPosition;
+        Vector3 deltaPosition = newPosition - rectTransform.localPosition;
+        UpdateLocalPosition(deltaPosition);
+
+        GridManager.Instance.HandleTokenDragFrame(draggedToken: this, dragDeltaForCurrentFrame:deltaPosition);
+        //rectTransform.localPosition = newPosition;
     }
 
     public void UpdateLocalPosition(Vector3 deltaLocalPosition)
     {
         rectTransform.localPosition += deltaLocalPosition;
+        Vector2 overflowDirection = GridManager.Instance.GetOverflowDirection(rectTransform.localPosition);
+        if (overflowDirection != Vector2.zero)
+        {
+            HandleTokenOverflow(overflowDirection);
+        }
+    }
+
+    private void HandleTokenOverflow(Vector2 overflowDirection)
+    {
+        if (overflowDirection == Vector2.up)
+            rectTransform.localPosition -= new Vector3(0, 910, 0);
+        else if (overflowDirection == Vector2.down)
+            rectTransform.localPosition += new Vector3(0, 910, 0);
+        else if (overflowDirection == Vector2.right)
+            rectTransform.localPosition -= new Vector3(910, 0, 0);
+        else if (overflowDirection == Vector2.left)
+            rectTransform.localPosition += new Vector3(910, 0, 0);
     }
 
     public void OnEndDrag(PointerEventData eventData)
@@ -93,7 +116,9 @@ public class TokenController : MonoBehaviour, IDragHandler, IBeginDragHandler, I
         {
             Vector2 dragDirection = GetDominantDirection(dragDelta);
             GridManager.Instance.HandleTokenDrag(this, dragDirection);
+            GridManager.Instance.HandleDragEnd();
         }
+
 
         SnapToGrid();
     }
@@ -110,7 +135,7 @@ public class TokenController : MonoBehaviour, IDragHandler, IBeginDragHandler, I
         }
     }
 
-    private void SnapToGrid()
+    public void SnapToGrid()
     {
         Vector3 nearestPosition = GridManager.Instance.GetNearestGridPosition(rectTransform.position);
         StartCoroutine(SmoothSnap(nearestPosition));

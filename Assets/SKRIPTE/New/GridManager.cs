@@ -63,7 +63,7 @@ public class GridManager : MonoBehaviour
         // each frame a token is dragged, apply movement to other tokens that are affected by its movement
         foreach (TokenController tc in nonDraggedTokensToBeAffectedByDrag)
         {
-            //tc.UpdateLocalPosition(dragDeltaForCurrentFrame);
+            tc.UpdateLocalPosition(dragDeltaForCurrentFrame);
         }
     }
 
@@ -78,7 +78,7 @@ public class GridManager : MonoBehaviour
         Vector2 direction = isVerticalDrag ? Vector2.up : Vector2.right;
 
         // Perform raycasting in both positive and negative directions
-        float maxDistance = 100f; // Arbitrary high value to ensure all relevant tokens are detected
+        float maxDistance = 1000f; // Arbitrary high value to ensure all relevant tokens are detected
 
         // Cast in the positive direction
         RaycastHit2D[] hitsPositive = Physics2D.RaycastAll(draggedPosition, direction, maxDistance);
@@ -167,5 +167,35 @@ public class GridManager : MonoBehaviour
     {
         Debug.Log($"Drag direction received: {dragDirection}");
         // Additional logic for dragging rows or columns can be added here
+    }
+
+    public void HandleDragEnd()
+    {
+        foreach (TokenController tc in nonDraggedTokensToBeAffectedByDrag)
+        {
+            tc.SnapToGrid();
+        }
+    }
+
+    public Vector2 GetOverflowDirection(Vector3 position)
+    {
+        // Get the grid's RectTransform
+        RectTransform rectTransform = GetComponent<RectTransform>();
+
+        // Token position is already in local space for Screen Space - Overlay
+        Vector3 localPosition = position;
+
+        // Define the grid boundaries
+        float halfWidth = rectTransform.rect.width / 2;
+        float halfHeight = rectTransform.rect.height / 2;
+
+        // Check for overflow and return the appropriate direction
+        if (localPosition.x < -halfWidth) return Vector2.left;
+        if (localPosition.x > halfWidth) return Vector2.right;
+        if (localPosition.y < -halfHeight) return Vector2.down;
+        if (localPosition.y > halfHeight) return Vector2.up;
+
+        // No overflow detected
+        return Vector2.zero;
     }
 }
