@@ -421,6 +421,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 386322061269350144, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
+      propertyPath: canDragVertical
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 386322061269350144, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
+      propertyPath: canDragHorizontal
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2294001459175124483, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
       propertyPath: m_Name
       value: Token (8)
@@ -525,6 +533,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 386322061269350144, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
+      propertyPath: canDragVertical
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2294001459175124483, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
       propertyPath: m_Name
       value: Token (5)
@@ -628,6 +640,14 @@ PrefabInstance:
     - target: {fileID: 337347240790610389, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 386322061269350144, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
+      propertyPath: canDragVertical
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 386322061269350144, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
+      propertyPath: canDragHorizontal
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2294001459175124483, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
       propertyPath: m_Name
@@ -817,6 +837,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 386322061269350144, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
+      propertyPath: canDragVertical
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 386322061269350144, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
+      propertyPath: canDragHorizontal
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2294001459175124483, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
       propertyPath: m_Name
       value: Token (2)
@@ -920,6 +948,10 @@ PrefabInstance:
     - target: {fileID: 337347240790610389, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 386322061269350144, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
+      propertyPath: canDragHorizontal
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2294001459175124483, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
       propertyPath: m_Name
@@ -1028,6 +1060,10 @@ PrefabInstance:
     - target: {fileID: 337347240790610389, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 386322061269350144, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
+      propertyPath: canDragVertical
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2294001459175124483, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
       propertyPath: m_Name
@@ -1203,6 +1239,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 386322061269350144, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
+      propertyPath: canDragHorizontal
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2294001459175124483, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
       propertyPath: m_Name
       value: Token (7)
@@ -1373,6 +1413,14 @@ PrefabInstance:
     - target: {fileID: 337347240790610389, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 386322061269350144, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
+      propertyPath: canDragVertical
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 386322061269350144, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
+      propertyPath: canDragHorizontal
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2294001459175124483, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
       propertyPath: m_Name

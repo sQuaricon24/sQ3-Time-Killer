@@ -45,6 +45,70 @@ public class GridManager : MonoBehaviour
         }
     }
 
+    // tokens in the same row or column, depending if draging vertical or horizontal
+    // these tokens will follow drag movement of dragged token, but with delay to achieve "vagons in the train" effect
+    private List<TokenController> nonDraggedTokensToBeAffectedByDrag;
+    // delay is applied to every token that follows movement of dragged token, but delay is multiplied for each token-to-token distance
+    // again, this additive delay is used to achieve "vagons in the train" effect
+    private float delay = 0.2f;
+
+    public void HandleBeginDrag(TokenController draggedToken, bool isVerticalDrag)
+    {
+        // when new drag action is stared, we fetch tokens that will be affected by this
+        FetchNonDraggedTokensToBeAffectedByDrag(draggedToken: draggedToken, isVerticalDrag: isVerticalDrag);
+    }
+
+    public void HandleTokenDragFrame(TokenController draggedToken, Vector2 dragDeltaForCurrentFrame)
+    {
+        // each frame a token is dragged, apply movement to other tokens that are affected by its movement
+        foreach (TokenController tc in nonDraggedTokensToBeAffectedByDrag)
+        {
+            //tc.UpdateLocalPosition(dragDeltaForCurrentFrame);
+        }
+    }
+
+    private void FetchNonDraggedTokensToBeAffectedByDrag(TokenController draggedToken, bool isVerticalDrag)
+    {
+        nonDraggedTokensToBeAffectedByDrag = new List<TokenController>();
+
+        // Get the position of the dragged token
+        Vector3 draggedPosition = draggedToken.transform.position;
+
+        // Define the direction of raycasting
+        Vector2 direction = isVerticalDrag ? Vector2.up : Vector2.right;
+
+        // Perform raycasting in both positive and negative directions
+        float maxDistance = 100f; // Arbitrary high value to ensure all relevant tokens are detected
+
+        // Cast in the positive direction
+        RaycastHit2D[] hitsPositive = Physics2D.RaycastAll(draggedPosition, direction, maxDistance);
+
+        // Cast in the negative direction
+        RaycastHit2D[] hitsNegative = Physics2D.RaycastAll(draggedPosition, -direction, maxDistance);
+
+        // Collect all tokens hit by the rays
+        foreach (var hit in hitsPositive)
+        {
+            AddTokenIfValid(hit, draggedToken);
+        }
+
+        foreach (var hit in hitsNegative)
+        {
+            AddTokenIfValid(hit, draggedToken);
+        }
+    }
+
+    private void AddTokenIfValid(RaycastHit2D hit, TokenController draggedToken)
+    {
+        // Check if the hit object is a token and not the dragged token
+        TokenController token = hit.collider.GetComponent<TokenController>();
+        if (token != null && token != draggedToken)
+        {
+            nonDraggedTokensToBeAffectedByDrag.Add(token);
+        }
+    }
+
+
     // Finds the nearest grid position for snapping
     public Vector3 GetNearestGridPosition(Vector3 currentPosition)
     {
