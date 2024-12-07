@@ -6,6 +6,7 @@ public class TokenController : MonoBehaviour, IDragHandler, IBeginDragHandler, I
 {
     private Vector3 initialPosition;
     private Vector3 dragStartPosition;
+    [SerializeField] private int tokenId;
     [SerializeField] private bool canDragVertical = false;
     [SerializeField] private bool canDragHorizontal = false;
 
@@ -21,6 +22,14 @@ public class TokenController : MonoBehaviour, IDragHandler, IBeginDragHandler, I
     // Lock the direction of the drag
     private bool isDirectionLocked = false;
     private Vector2 lockedDirection = Vector2.zero;
+
+    [SerializeField] private int gridPositionIndex;
+
+    public int GridPositionIndex => gridPositionIndex;
+    public void SetGridPositionIndex(int index)
+    {
+        gridPositionIndex = index;
+    }
 
     // TO DO: refactor this naming and variable
     public void SetCanDragVertical(bool canDragVertical)
@@ -45,12 +54,12 @@ public class TokenController : MonoBehaviour, IDragHandler, IBeginDragHandler, I
     {
         dragStartPosition = rectTransform.localPosition;
         isDirectionLocked = false; // Reset direction lock at the start of each drag
-        Debug.LogError("ON BEGING DRAG");
+        //Debug.LogError("ON BEGING DRAG");
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        Debug.LogError("ON DRAG");
+        //Debug.LogError("ON DRAG");
 
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             (RectTransform)transform.parent,

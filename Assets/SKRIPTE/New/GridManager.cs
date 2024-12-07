@@ -1,5 +1,7 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -21,6 +23,7 @@ public class GridManager : MonoBehaviour
     private void Start()
     {
         InitializeGrid();
+        SetGridPositionIndexesAccordingToPositionForAllTokens();
     }
 
     // Initializes grid positions based on the UI RectTransform
@@ -55,10 +58,56 @@ public class GridManager : MonoBehaviour
     // again, this additive delay is used to achieve "vagons in the train" effect
     private float delay = 0.2f;
 
+    // if row 1 is moved left, row 3 needs do be moved right, and vice versa, inverted mirror movement
+    // in same way, if column 1 is moved up, column 3 needs to be moved down
+    private List<TokenController> oppisiteTokensAffectedByDrag;
+
     public void HandleBeginDrag(TokenController draggedToken, bool isVerticalDrag)
     {
         // when new drag action is stared, we fetch tokens that will be affected by this
         FetchNonDraggedTokensToBeAffectedByDrag(draggedToken: draggedToken, isVerticalDrag: isVerticalDrag);
+        FetchOppisiteTokensAffectedByDrag(draggedToken: draggedToken, isVerticalDrag: isVerticalDrag);
+    }
+
+    private void FetchOppisiteTokensAffectedByDrag(TokenController draggedToken, bool isVerticalDrag)
+    {
+        oppisiteTokensAffectedByDrag = new List<TokenController>();
+        int tokenIndex;
+        int oppositeIndex;
+        TokenController fetchedTc;
+        foreach (TokenController tc in nonDraggedTokensToBeAffectedByDrag)
+        {
+            tokenIndex = GetTokenIndexFromPosition(tc.GetComponent<RectTransform>().localPosition);
+            oppositeIndex = GetOppositeTokenGridPositionIndexForMovementDirection(isVerticalDrag, tokenIndex);
+            fetchedTc = GetTokenByGridPositionIndex(oppositeIndex);
+            if(fetchedTc == null)
+            {
+                Debug.LogError("NULL FOR INDEX " + oppositeIndex);
+            }
+            oppisiteTokensAffectedByDrag.Add(fetchedTc);
+        }
+
+        tokenIndex = GetTokenIndexFromPosition(draggedToken.GetComponent<RectTransform>().localPosition);
+        oppositeIndex = GetOppositeTokenGridPositionIndexForMovementDirection(isVerticalDrag, tokenIndex);
+        fetchedTc = GetTokenByGridPositionIndex(oppositeIndex);
+        if (fetchedTc == null)
+        {
+            Debug.LogError("NULL FOR INDEX " + oppositeIndex);
+        }
+        oppisiteTokensAffectedByDrag.Add(fetchedTc);
+    }
+
+    private TokenController GetTokenByGridPositionIndex(int index)
+    {
+        return tokens.FirstOrDefault(x => x.GridPositionIndex == index);
+    }
+
+    private void SetGridPositionIndexesAccordingToPositionForAllTokens()
+    {
+        foreach(TokenController tc in tokens)
+        {
+            tc.SetGridPositionIndex(GetTokenIndexFromPosition(tc.GetComponent<RectTransform>().localPosition));
+        }
     }
 
     public void HandleTokenDragFrame(TokenController draggedToken, Vector2 dragDeltaForCurrentFrame)
@@ -68,6 +117,11 @@ public class GridManager : MonoBehaviour
         {
             tc.UpdateLocalPosition(dragDeltaForCurrentFrame);
         }
+
+        foreach (TokenController tc in oppisiteTokensAffectedByDrag)
+        {
+            tc.UpdateLocalPosition(-dragDeltaForCurrentFrame);
+        }      
     }
 
     private void FetchNonDraggedTokensToBeAffectedByDrag(TokenController draggedToken, bool isVerticalDrag)
@@ -179,8 +233,14 @@ public class GridManager : MonoBehaviour
             tc.SnapToGrid();
         }
 
+        foreach (TokenController tc in oppisiteTokensAffectedByDrag)
+        {
+            tc.SnapToGrid();
+        }
+
         // TO DO: refactor
         Invoke("UpdateDragConstraintsForEachToken", 0.4f);
+        Invoke("SetGridPositionIndexesAccordingToPositionForAllTokens", 0.4f);
         //UpdateDragConstraintsForEachToken();
         // trigger OnMoveFinished event so other script, GridLogic maybe, can apply logic
     }
@@ -209,8 +269,8 @@ public class GridManager : MonoBehaviour
         float[] rows = { 300f, 0f, -300f };
 
         // Find the closest column and row indices
-        int colIndex = System.Array.IndexOf(columns, positionInGrid.x);
-        int rowIndex = System.Array.IndexOf(rows, positionInGrid.y);
+        int colIndex = Array.IndexOf(columns, positionInGrid.x);
+        int rowIndex = Array.IndexOf(rows, positionInGrid.y);
 
         // Validate indices and calculate the token index
         if (colIndex != -1 && rowIndex != -1)
@@ -255,6 +315,23 @@ public class GridManager : MonoBehaviour
             case (7): return true;
             case (8): return true;
             default: return false;
+        }
+    }
+
+    private int GetOppositeTokenGridPositionIndexForMovementDirection(bool isVertical, int positionIndex)
+    {
+        switch (positionIndex)
+        {
+            case (0): return isVertical ? 2 : 6;
+            case (1): return isVertical ? -1 :7;
+            case (2): return isVertical ? 0 : 8;
+            case (3): return isVertical ? 5 : -1;
+            case (4): return isVertical ? -1 : -1;
+            case (5): return isVertical ? 3 : -1;
+            case (6): return isVertical ? 8 : 0;
+            case (7): return isVertical ? -1: 1;
+            case (8): return isVertical ? 6 : 2;
+            default: return -1;
         }
     }
 
