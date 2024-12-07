@@ -10,7 +10,7 @@ public class TokenController : MonoBehaviour, IDragHandler, IBeginDragHandler, I
     [SerializeField] private bool canDragHorizontal = false;
 
     [SerializeField]
-    private float dragThreshold = 50f; // Minimum distance in pixels for a valid drag
+    private float dragThreshold = 100f; // Minimum distance in pixels for a valid drag
 
     private RectTransform rectTransform;
 
@@ -21,6 +21,17 @@ public class TokenController : MonoBehaviour, IDragHandler, IBeginDragHandler, I
     // Lock the direction of the drag
     private bool isDirectionLocked = false;
     private Vector2 lockedDirection = Vector2.zero;
+
+    // TO DO: refactor this naming and variable
+    public void SetCanDragVertical(bool canDragVertical)
+    {
+        allowVertical = canDragVertical;
+    }
+
+    public void SetCanDragHorizontal(bool canDragHorizontal)
+    {
+        allowHorizontal = canDragHorizontal;
+    }
 
     private void Start()
     {
@@ -34,10 +45,13 @@ public class TokenController : MonoBehaviour, IDragHandler, IBeginDragHandler, I
     {
         dragStartPosition = rectTransform.localPosition;
         isDirectionLocked = false; // Reset direction lock at the start of each drag
+        Debug.LogError("ON BEGING DRAG");
     }
 
     public void OnDrag(PointerEventData eventData)
     {
+        Debug.LogError("ON DRAG");
+
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             (RectTransform)transform.parent,
             eventData.position,
@@ -52,37 +66,46 @@ public class TokenController : MonoBehaviour, IDragHandler, IBeginDragHandler, I
         {
             Vector3 dragDelta = localPosition - (Vector2)dragStartPosition;
 
-            if (Mathf.Abs(dragDelta.x) > Mathf.Abs(dragDelta.y) && allowHorizontal)
+            // Check if drag exceeds the threshold
+            if (dragDelta.magnitude >= dragThreshold)
             {
-                lockedDirection = Vector2.right;
-                isDirectionLocked = true;
-            }
-            else if (Mathf.Abs(dragDelta.y) > Mathf.Abs(dragDelta.x) && allowVertical)
-            {
-                lockedDirection = Vector2.up;
-                isDirectionLocked = true;
-            }
+                if (Mathf.Abs(dragDelta.x) > Mathf.Abs(dragDelta.y) && allowHorizontal)
+                {
+                    lockedDirection = Vector2.right;
+                    isDirectionLocked = true;
+                }
+                else if (Mathf.Abs(dragDelta.y) > Mathf.Abs(dragDelta.x) && allowVertical)
+                {
+                    lockedDirection = Vector2.up;
+                    isDirectionLocked = true;
+                }
 
-            GridManager.Instance.HandleBeginDrag(draggedToken: this, isVerticalDrag: lockedDirection == Vector2.up);
+                if (isDirectionLocked)
+                {
+                    GridManager.Instance.HandleBeginDrag(draggedToken: this, isVerticalDrag: lockedDirection == Vector2.up);
+                }
+            }
         }
 
         // Apply constraints based on the locked direction
-        if (lockedDirection == Vector2.right)
+        if (isDirectionLocked)
         {
-            newPosition.x = localPosition.x; // Allow horizontal movement
-            newPosition.y = dragStartPosition.y; // Lock vertical position
-        }
-        else if (lockedDirection == Vector2.up)
-        {
-            newPosition.y = localPosition.y; // Allow vertical movement
-            newPosition.x = dragStartPosition.x; // Lock horizontal position
-        }
+            if (lockedDirection == Vector2.right)
+            {
+                newPosition.x = localPosition.x; // Allow horizontal movement
+                newPosition.y = dragStartPosition.y; // Lock vertical position
+            }
+            else if (lockedDirection == Vector2.up)
+            {
+                newPosition.y = localPosition.y; // Allow vertical movement
+                newPosition.x = dragStartPosition.x; // Lock horizontal position
+            }
 
-        Vector3 deltaPosition = newPosition - rectTransform.localPosition;
-        UpdateLocalPosition(deltaPosition);
+            Vector3 deltaPosition = newPosition - rectTransform.localPosition;
+            UpdateLocalPosition(deltaPosition);
 
-        GridManager.Instance.HandleTokenDragFrame(draggedToken: this, dragDeltaForCurrentFrame:deltaPosition);
-        //rectTransform.localPosition = newPosition;
+            GridManager.Instance.HandleTokenDragFrame(draggedToken: this, dragDeltaForCurrentFrame: deltaPosition);
+        }
     }
 
     public void UpdateLocalPosition(Vector3 deltaLocalPosition)
@@ -109,6 +132,8 @@ public class TokenController : MonoBehaviour, IDragHandler, IBeginDragHandler, I
 
     public void OnEndDrag(PointerEventData eventData)
     {
+        Debug.LogError("ON END DRAG");
+
         Vector3 dragEndPosition = rectTransform.localPosition;
         Vector3 dragDelta = dragEndPosition - dragStartPosition;
 
@@ -116,11 +141,10 @@ public class TokenController : MonoBehaviour, IDragHandler, IBeginDragHandler, I
         {
             Vector2 dragDirection = GetDominantDirection(dragDelta);
             GridManager.Instance.HandleTokenDrag(this, dragDirection);
-            GridManager.Instance.HandleDragEnd();
         }
 
-
         SnapToGrid();
+        GridManager.Instance.HandleDragEnd();
     }
 
     private Vector2 GetDominantDirection(Vector3 delta)

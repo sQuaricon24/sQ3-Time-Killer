@@ -1,13 +1,15 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class GridManager : MonoBehaviour
 {
     public static GridManager Instance;
 
     [Header("Grid Settings")]
-    public List<GameObject> tokens;       // References to all token GameObjects
+    public List<TokenController> tokens;       // References to all token GameObjects
     public List<Vector3> gridPositions;  // Predefined positions for the grid
     public float moveDuration = 0.5f;    // Duration of the movement animation
 
@@ -24,6 +26,7 @@ public class GridManager : MonoBehaviour
     // Initializes grid positions based on the UI RectTransform
     private void InitializeGrid()
     {
+        tokens = new List<TokenController>(GetComponentsInChildren<TokenController>());
         gridPositions = new List<Vector3>();
 
         RectTransform rectTransform = GetComponent<RectTransform>();
@@ -143,7 +146,7 @@ public class GridManager : MonoBehaviour
 
 
     // Moves a token to a specific grid position with animation
-    private IEnumerator MoveTokenToPosition(GameObject token, Vector3 targetPosition)
+    private IEnumerator MoveTokenToPosition(TokenController token, Vector3 targetPosition)
     {
         RectTransform rectTransform = token.GetComponent<RectTransform>();
         Vector3 startPosition = rectTransform.localPosition;
@@ -175,7 +178,87 @@ public class GridManager : MonoBehaviour
         {
             tc.SnapToGrid();
         }
+
+        // TO DO: refactor
+        Invoke("UpdateDragConstraintsForEachToken", 0.4f);
+        //UpdateDragConstraintsForEachToken();
+        // trigger OnMoveFinished event so other script, GridLogic maybe, can apply logic
     }
+
+    private void UpdateDragConstraintsForEachToken()
+    {
+        foreach(TokenController tc in tokens)
+        {
+            int tokenIndex = GetTokenIndexFromPosition(tc.GetComponent<RectTransform>().localPosition);
+            tc.SetCanDragHorizontal(CanDragHorizontalForGridPositionIndex(tokenIndex));
+            tc.SetCanDragVertical(CanDragVerticalForGridPositionIndex(tokenIndex));
+        }
+    }
+
+
+    private int GetTokenIndexFromPosition(Vector2 positionInGrid)
+    {
+        //0,1,2
+        //3,4,5
+        //6,7,8
+
+        //TO DO: make dynamic
+
+        // Define the center positions for rows and columns
+        float[] columns = { -300f, 0f, 300f };
+        float[] rows = { 300f, 0f, -300f };
+
+        // Find the closest column and row indices
+        int colIndex = System.Array.IndexOf(columns, positionInGrid.x);
+        int rowIndex = System.Array.IndexOf(rows, positionInGrid.y);
+
+        // Validate indices and calculate the token index
+        if (colIndex != -1 && rowIndex != -1)
+        {
+            return rowIndex * 3 + colIndex;
+        }
+
+        // Return -1 if the position is outside the grid
+        return -1;
+    }
+
+    // TO DO: try to make dynamic
+    private bool CanDragVerticalForGridPositionIndex(int positionIndex)
+    {
+        switch(positionIndex)
+        {
+            case (0): return true;
+            case (1): return false;
+            case (2): return true;
+            case (3): return true;
+            case (4): return false;
+            case (5): return true;
+            case (6): return true;
+            case (7): return false;
+            case (8): return true;
+            default:return false;
+        }
+    }
+
+    // TO DO: try to make dynamic
+    private bool CanDragHorizontalForGridPositionIndex(int positionIndex)
+    {
+        switch (positionIndex)
+        {
+            case (0): return true;
+            case (1): return true;
+            case (2): return true;
+            case (3): return false;
+            case (4): return false;
+            case (5): return false;
+            case (6): return true;
+            case (7): return true;
+            case (8): return true;
+            default: return false;
+        }
+    }
+
+
 
     public Vector2 GetOverflowDirection(Vector3 position)
     {
