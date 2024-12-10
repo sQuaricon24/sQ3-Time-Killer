@@ -1116,7 +1116,7 @@ GameObject:
   - component: {fileID: 1380473209}
   - component: {fileID: 1380473210}
   m_Layer: 5
-  m_Name: GridParent
+  m_Name: Grid
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1461,6 +1461,18 @@ PrefabInstance:
     - target: {fileID: 2294001459175124483, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
       propertyPath: m_Name
       value: Token
+      objectReference: {fileID: 0}
+    - target: {fileID: 5619074623008263621, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
+      propertyPath: m_Color.b
+      value: 0.18723741
+      objectReference: {fileID: 0}
+    - target: {fileID: 5619074623008263621, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
+      propertyPath: m_Color.g
+      value: 0.18723741
+      objectReference: {fileID: 0}
+    - target: {fileID: 5619074623008263621, guid: 8ec53798dc10fdc4cbc67b098c923434, type: 3}
+      propertyPath: m_Color.r
+      value: 0.6320754
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_AddedGameObjects: []

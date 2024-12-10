@@ -2,9 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class GridManager : MonoBehaviour
 {
@@ -14,6 +12,9 @@ public class GridManager : MonoBehaviour
     public List<TokenController> tokens;       // References to all token GameObjects
     public List<Vector3> gridPositions;  // Predefined positions for the grid
     public float moveDuration = 0.5f;    // Duration of the movement animation
+    private bool isDraggingEnabled = true;
+
+    public bool IsDraggingEnabled => isDraggingEnabled;
 
     private void Awake()
     {
@@ -53,14 +54,14 @@ public class GridManager : MonoBehaviour
 
     // tokens in the same row or column, depending if draging vertical or horizontal
     // these tokens will follow drag movement of dragged token, but with delay to achieve "vagons in the train" effect
-    private List<TokenController> nonDraggedTokensToBeAffectedByDrag;
+    [SerializeField] private List<TokenController> nonDraggedTokensToBeAffectedByDrag;
     // delay is applied to every token that follows movement of dragged token, but delay is multiplied for each token-to-token distance
     // again, this additive delay is used to achieve "vagons in the train" effect
     private float delay = 0.2f;
 
     // if row 1 is moved left, row 3 needs do be moved right, and vice versa, inverted mirror movement
     // in same way, if column 1 is moved up, column 3 needs to be moved down
-    private List<TokenController> oppisiteTokensAffectedByDrag;
+    [SerializeField] private List<TokenController> oppisiteTokensAffectedByDrag;
 
     public void HandleBeginDrag(TokenController draggedToken, bool isVerticalDrag)
     {
@@ -108,21 +109,35 @@ public class GridManager : MonoBehaviour
         {
             tc.SetGridPositionIndex(GetTokenIndexFromPosition(tc.GetComponent<RectTransform>().localPosition));
         }
+
+        isDraggingEnabled = true;
     }
 
     public void HandleTokenDragFrame(TokenController draggedToken, Vector2 dragDeltaForCurrentFrame)
     {
-        // each frame a token is dragged, apply movement to other tokens that are affected by its movement
-        foreach (TokenController tc in nonDraggedTokensToBeAffectedByDrag)
-        {
-            tc.UpdateLocalPosition(dragDeltaForCurrentFrame);
-        }
+        if (nonDraggedTokensToBeAffectedByDrag == null || oppisiteTokensAffectedByDrag == null)
+            return;
 
-        foreach (TokenController tc in oppisiteTokensAffectedByDrag)
+        StartCoroutine(AnimateTokensWithDelay(nonDraggedTokensToBeAffectedByDrag, dragDeltaForCurrentFrame, 0.05f));
+        StartCoroutine(AnimateTokensWithDelay(oppisiteTokensAffectedByDrag, -dragDeltaForCurrentFrame, 0.05f));
+
+        if(nonDraggedTokensToBeAffectedByDrag.Count < 2 || oppisiteTokensAffectedByDrag.Count < 3)
         {
-            tc.UpdateLocalPosition(-dragDeltaForCurrentFrame);
-        }      
+            string wtf = "wtf";
+            Debug.LogError("YUP");
+        }
     }
+
+    private IEnumerator AnimateTokensWithDelay(List<TokenController> tokens, Vector2 dragDelta, float delayPerToken)
+    {
+        for (int i = 0; i < tokens.Count; i++)
+        {
+            //yield return new WaitForSeconds(delayPerToken);
+            yield return null;
+            tokens[i].UpdateLocalPosition(dragDelta);
+        }
+    }
+
 
     private void FetchNonDraggedTokensToBeAffectedByDrag(TokenController draggedToken, bool isVerticalDrag)
     {
@@ -136,6 +151,10 @@ public class GridManager : MonoBehaviour
 
         // Perform raycasting in both positive and negative directions
         float maxDistance = 1000f; // Arbitrary high value to ensure all relevant tokens are detected
+
+        // TO DO: differentiate between first token in direction and opposite direction because we need to know direction in which
+        // we propagate delay
+
 
         // Cast in the positive direction
         RaycastHit2D[] hitsPositive = Physics2D.RaycastAll(draggedPosition, direction, maxDistance);
@@ -159,8 +178,12 @@ public class GridManager : MonoBehaviour
     {
         // Check if the hit object is a token and not the dragged token
         TokenController token = hit.collider.GetComponent<TokenController>();
-        if (token != null && token != draggedToken)
+        if (token != null && token != draggedToken && token.name != draggedToken.name)
         {
+            if(token == null)
+            {
+                Debug.LogError("TOKEN IS NULL");
+            }
             nonDraggedTokensToBeAffectedByDrag.Add(token);
         }
     }
@@ -188,16 +211,6 @@ public class GridManager : MonoBehaviour
         return rectTransform.TransformPoint(nearestPosition);
     }
 
-    // Snaps all tokens to their nearest grid positions
-    public void SnapTokensToGrid()
-    {
-        foreach (var token in tokens)
-        {
-            Vector3 targetPosition = GetNearestGridPosition(token.transform.position);
-            StartCoroutine(MoveTokenToPosition(token, targetPosition));
-        }
-    }
-
 
     // Moves a token to a specific grid position with animation
     private IEnumerator MoveTokenToPosition(TokenController token, Vector3 targetPosition)
@@ -219,31 +232,32 @@ public class GridManager : MonoBehaviour
         rectTransform.localPosition = localTargetPosition;
     }
 
-    // Handles drag-based token movement
-    public void HandleTokenDrag(TokenController token, Vector2 dragDirection)
-    {
-        Debug.Log($"Drag direction received: {dragDirection}");
-        // Additional logic for dragging rows or columns can be added here
-    }
-
     public void HandleDragEnd()
     {
+        isDraggingEnabled = false;
+
+        float cumulativeDelay = 0;
+        //Debug.LogError("Handle drag end");
         foreach (TokenController tc in nonDraggedTokensToBeAffectedByDrag)
         {
-            tc.SnapToGrid();
+            cumulativeDelay += 0.05f;
+            StartCoroutine(tc.SnapToGrid(cumulativeDelay));
         }
 
         foreach (TokenController tc in oppisiteTokensAffectedByDrag)
         {
-            tc.SnapToGrid();
+            cumulativeDelay += 0.05f;
+            StartCoroutine(tc.SnapToGrid(cumulativeDelay));
         }
 
+       // Invoke("PlayDwinldeAnimations", 0.4f);
         // TO DO: refactor
-        Invoke("UpdateDragConstraintsForEachToken", 0.4f);
-        Invoke("SetGridPositionIndexesAccordingToPositionForAllTokens", 0.4f);
+        Invoke("UpdateDragConstraintsForEachToken", 1.4f);
+        Invoke("SetGridPositionIndexesAccordingToPositionForAllTokens", 1.5f);
         //UpdateDragConstraintsForEachToken();
         // trigger OnMoveFinished event so other script, GridLogic maybe, can apply logic
     }
+
 
     private void UpdateDragConstraintsForEachToken()
     {
@@ -256,6 +270,8 @@ public class GridManager : MonoBehaviour
     }
 
 
+    
+
     private int GetTokenIndexFromPosition(Vector2 positionInGrid)
     {
         //0,1,2
@@ -264,22 +280,39 @@ public class GridManager : MonoBehaviour
 
         //TO DO: make dynamic
 
-        // Define the center positions for rows and columns
+        // Define grid centers for rows and columns
         float[] columns = { -300f, 0f, 300f };
         float[] rows = { 300f, 0f, -300f };
 
         // Find the closest column and row indices
-        int colIndex = Array.IndexOf(columns, positionInGrid.x);
-        int rowIndex = Array.IndexOf(rows, positionInGrid.y);
+        int colIndex = GetClosestIndex(positionInGrid.x, columns);
+        int rowIndex = GetClosestIndex(positionInGrid.y, rows);
 
         // Validate indices and calculate the token index
         if (colIndex != -1 && rowIndex != -1)
         {
-            return rowIndex * 3 + colIndex;
+            return rowIndex * columns.Length + colIndex;
         }
 
-        // Return -1 if the position is outside the grid
-        return -1;
+        Debug.LogError($"Invalid position in grid: {positionInGrid}");
+        return -1; // Return -1 if the position is outside the grid
+    }
+
+    private int GetClosestIndex(float value, float[] referencePoints)
+    {
+        int closestIndex = -1;
+        float minDistance = float.MaxValue;
+
+        for (int i = 0; i < referencePoints.Length; i++)
+        {
+            float distance = Mathf.Abs(value - referencePoints[i]);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closestIndex = i;
+            }
+        }
+        return closestIndex;
     }
 
     // TO DO: try to make dynamic
@@ -296,7 +329,7 @@ public class GridManager : MonoBehaviour
             case (6): return true;
             case (7): return false;
             case (8): return true;
-            default:return false;
+            default: Debug.LogError("NOT VALID POS INDEX 1"); return false;
         }
     }
 
@@ -314,7 +347,7 @@ public class GridManager : MonoBehaviour
             case (6): return true;
             case (7): return true;
             case (8): return true;
-            default: return false;
+            default: Debug.LogError("NOT VALID POS INDEX 2"); return false;
         }
     }
 
@@ -331,29 +364,28 @@ public class GridManager : MonoBehaviour
             case (6): return isVertical ? 8 : 0;
             case (7): return isVertical ? -1: 1;
             case (8): return isVertical ? 6 : 2;
-            default: return -1;
+            default: Debug.LogError("NOT VALID POS INDEX 3"); return -1;
         }
     }
-
 
 
     public Vector2 GetOverflowDirection(Vector3 position)
     {
         // Get the grid's RectTransform
         RectTransform rectTransform = GetComponent<RectTransform>();
-
         // Token position is already in local space for Screen Space - Overlay
         Vector3 localPosition = position;
 
+        //Debug.LogError("localPosition " + localPosition);
         // Define the grid boundaries
         float halfWidth = rectTransform.rect.width / 2;
         float halfHeight = rectTransform.rect.height / 2;
 
         // Check for overflow and return the appropriate direction
-        if (localPosition.x < -halfWidth) return Vector2.left;
-        if (localPosition.x > halfWidth) return Vector2.right;
-        if (localPosition.y < -halfHeight) return Vector2.down;
-        if (localPosition.y > halfHeight) return Vector2.up;
+        if (localPosition.x <= -halfWidth) return Vector2.left;
+        if (localPosition.x >= halfWidth) return Vector2.right;
+        if (localPosition.y <= -halfHeight) return Vector2.down;
+        if (localPosition.y >= halfHeight) return Vector2.up;
 
         // No overflow detected
         return Vector2.zero;
