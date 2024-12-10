@@ -2,243 +2,222 @@ using DG.Tweening;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
-
-public class TokenController : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHandler
+namespace Squaricon.SQ3
 {
-    private Vector3 initialPosition;
-    private Vector3 dragStartPosition;
-    [SerializeField] private int tokenId;
-    [SerializeField] private bool canDragVertical = false;
-    [SerializeField] private bool canDragHorizontal = false;
-
-    [SerializeField]
-    private float dragThreshold = 100f; // Minimum distance in pixels for a valid drag
-
-    private RectTransform rectTransform;
-
-    // Restriction flags
-    //private bool allowHorizontal;
-    //private bool allowVertical;
-
-    // Lock the direction of the drag
-    private bool isDirectionLocked = false;
-    private Vector2 lockedDirection = Vector2.zero;
-    private Vector3 lastKnownDeltaPosition = Vector3.zero;
-    private bool isSpecialDebugEnabled = false;
-
-    [SerializeField] private int gridPositionIndex;
-
-    public int GridPositionIndex => gridPositionIndex;
-    public void SetGridPositionIndex(int index)
+    public partial class TokenController : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHandler
     {
-        gridPositionIndex = index;
-    }
+        [SerializeField] private int tokenId;
 
-    // TO DO: refactor this naming and variable
-    public void SetCanDragVertical(bool cdv)
-    {
-        canDragVertical = cdv;
-    }
+        [Tooltip("Will get overriden in runtime, just for inspection")]
+        [SerializeField] private bool canDragVertical = false;
+        [SerializeField] private bool canDragHorizontal = false;
+        [SerializeField] private int gridPositionIndex;
+        [Space(10)]
+        [SerializeField] private float dragThreshold = 50f; // Minimum distance in pixels for a valid drag start
 
-    public void SetCanDragHorizontal(bool cdh)
-    {
-        canDragHorizontal = cdh;
-    }
+        private RectTransform myRectTransform;
+        private Vector3 initialPosition;
+        private Vector3 dragStartPosition;
+        // We allow only straight vertical and horizontal drag
+        private bool isDragAxisDetermined = false;
+        private DragAxis activeDragAxis = DragAxis.None;
+        private float dragSpeed;
+        private Vector2 snapDirection;
 
-    private void Start()
-    {
-        rectTransform = GetComponent<RectTransform>();
-        initialPosition = rectTransform.localPosition;
-    }
 
-    public void OnBeginDrag(PointerEventData eventData)
-    {
-        if (!GridManager.Instance.IsDraggingEnabled)
-            return;
+        public int GridPositionIndex => gridPositionIndex;
 
-        dragStartPosition = rectTransform.localPosition;
-        isDirectionLocked = false; // Reset direction lock at the start of each drag
-        //Debug.LogError("ON BEGING DRAG");
-    }
 
-    public void OnDrag(PointerEventData eventData)
-    {
-        //Debug.LogError("ON DRAG");
-        if (!GridManager.Instance.IsDraggingEnabled)
-            return;
-
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            (RectTransform)transform.parent,
-            eventData.position,
-            eventData.pressEventCamera,
-            out Vector2 localPosition
-        );
-
-        Vector3 newPosition = rectTransform.localPosition;
-
-        // Determine drag direction and lock it if not already locked
-        if (!isDirectionLocked)
+        public void SetGridPositionIndex(int index)
         {
-            Vector3 dragDelta = localPosition - (Vector2)dragStartPosition;
+            gridPositionIndex = index;
+        }
 
-            // Check if drag exceeds the threshold
-            if (dragDelta.magnitude >= dragThreshold)
+        public void SetCanDragVertical(bool cdv)
+        {
+            canDragVertical = cdv;
+        }
+
+        public void SetCanDragHorizontal(bool cdh)
+        {
+            canDragHorizontal = cdh;
+        }
+        public void AddToLocalPosition(Vector3 deltaLocalPosition)
+        {
+            myRectTransform.localPosition += deltaLocalPosition;
+        }
+
+        public IEnumerator SnapToGrid(float delay = 0f)
+        {
+            yield return new WaitForSeconds(delay);
+            Vector3 nearestPosition = GridManager.Instance.GetNearestGridPosition(myRectTransform.position);
+            SmoothSnap(nearestPosition);
+        }
+
+
+        #region DRAGGING LOGIC
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            if (!GridManager.Instance.IsDraggingEnabled)
+                return;
+
+            dragStartPosition = myRectTransform.localPosition;
+            isDragAxisDetermined = false; // we need to determine the axis on start of each drag
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            //Debug.LogError("ON DRAG");
+            if (!GridManager.Instance.IsDraggingEnabled)
+                return;
+
+            // map screen point to coordinate inside a grid to determine where user tapped
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                (RectTransform)transform.parent,
+                eventData.position,
+                eventData.pressEventCamera,
+                out Vector2 localPosition
+            );
+
+            Vector3 newPosition = myRectTransform.localPosition;
+
+            // Determine drag direction
+            if (!isDragAxisDetermined)
             {
-                if (Mathf.Abs(dragDelta.x) > Mathf.Abs(dragDelta.y) && canDragHorizontal)
+                Vector3 dragDelta = localPosition - (Vector2)dragStartPosition;
+
+                // Check if drag exceeds the threshold to be actually registered as a drag and not as just finger placement
+                if (dragDelta.magnitude >= dragThreshold)
                 {
-                    lockedDirection = Vector2.right;
-                    isDirectionLocked = true;
+                    if (Mathf.Abs(dragDelta.x) > Mathf.Abs(dragDelta.y) && canDragHorizontal)
+                    {
+                        activeDragAxis = DragAxis.Horizontal;
+                        isDragAxisDetermined = true;
+                    }
+                    else if (Mathf.Abs(dragDelta.y) > Mathf.Abs(dragDelta.x) && canDragVertical)
+                    {
+                        activeDragAxis = DragAxis.Vertical;
+                        isDragAxisDetermined = true;
+                    }
+                    else
+                    {
+                        Debug.LogError("WAS NOT ABLE TO DETERMINE DRAG AXIS");
+                    }
+
+                    if (isDragAxisDetermined)
+                    {
+                        SquariconGlobalEvents.OnTokenDragStarted(this, activeDragAxis);
+                        //GridManager.Instance.HandleBeginDrag(draggedToken: this, isVerticalDrag: activeDragAxis == DragAxis.Vertical);
+                    }
                 }
-                else if (Mathf.Abs(dragDelta.y) > Mathf.Abs(dragDelta.x) && canDragVertical)
+            }
+
+            // Apply constraints based on the locked direction
+            if (isDragAxisDetermined)
+            {
+                if (activeDragAxis == DragAxis.Horizontal)
                 {
-                    lockedDirection = Vector2.up;
-                    isDirectionLocked = true;
+                    newPosition.x = localPosition.x; // Allow horizontal movement
+                    newPosition.y = dragStartPosition.y; // Lock vertical position
                 }
-                else
+                else if (activeDragAxis == DragAxis.Vertical)
                 {
-                    Debug.LogError("EEE NOO DIRECTION");
+                    newPosition.y = localPosition.y; // Allow vertical movement
+                    newPosition.x = dragStartPosition.x; // Lock horizontal position
                 }
 
-                if (isDirectionLocked)
-                {
-                    GridManager.Instance.HandleBeginDrag(draggedToken: this, isVerticalDrag: lockedDirection == Vector2.up);
-                }
+                Vector3 deltaPosition = newPosition - myRectTransform.localPosition;
+                deltaPosition = deltaPosition.normalized * dragSpeed;
+
+                // Grid manager determines which tokens should be dragged, this invoking token will be draged but movement will be
+                // replicated to other tokens according to game logic
+                SquariconGlobalEvents.OnTokenDragFrameCompleted(this, (Vector2)deltaPosition, activeDragAxis);
+                //GridManager.Instance.HandleTokenDragFrame(draggedToken: this, dragDeltaForCurrentFrame: deltaPosition);
             }
         }
 
-        // Apply constraints based on the locked direction
-        if (isDirectionLocked)
+        public void OnEndDrag(PointerEventData eventData)
         {
-            if (lockedDirection == Vector2.right)
+            if (!GridManager.Instance.IsDraggingEnabled)
+                return;
+
+            GridManager.Instance.HandleDragEnd();
+        }
+        #endregion
+
+
+        private void Awake()
+        {
+            myRectTransform = GetComponent<RectTransform>();
+            initialPosition = myRectTransform.localPosition;
+        }
+
+        private void Start()
+        {
+            dragSpeed = GridManager.Instance.DragSpeed;
+        }
+
+        private void Update()
+        {
+            HandleTokenOverflow();
+        }
+
+
+
+        private void HandleTokenOverflow()
+        {
+            Vector2 overflowDirection = GridManager.Instance.GetOverflowDirection(myRectTransform.localPosition);
+            if (overflowDirection != Vector2.zero)
             {
-                newPosition.x = localPosition.x; // Allow horizontal movement
-                newPosition.y = dragStartPosition.y; // Lock vertical position
+                KickTokenToTheOtherSide(overflowDirection);
             }
-            else if (lockedDirection == Vector2.up)
-            {
-                newPosition.y = localPosition.y; // Allow vertical movement
-                newPosition.x = dragStartPosition.x; // Lock horizontal position
-            }
-
-            Vector3 deltaPosition = newPosition - rectTransform.localPosition;
-            deltaPosition = deltaPosition.normalized * 5;
-            //Debug.LogError("deltaPosition " + deltaPosition);
-            UpdateLocalPosition(deltaPosition);
-            lastKnownDeltaPosition = deltaPosition;
-
-            GridManager.Instance.HandleTokenDragFrame(draggedToken: this, dragDeltaForCurrentFrame: deltaPosition);
         }
-    }
 
-    void Update()
-    {
-        if(Input.GetKeyUp(KeyCode.Space))
+        // TO DO: solve magic numbers
+        private void KickTokenToTheOtherSide(Vector2 overflowDirection)
         {
-            isSpecialDebugEnabled = !isSpecialDebugEnabled;
+            if (overflowDirection == Vector2.up)
+                myRectTransform.localPosition -= new Vector3(0, 900, 0);
+            else if (overflowDirection == Vector2.down)
+                myRectTransform.localPosition += new Vector3(0, 900, 0);
+            else if (overflowDirection == Vector2.right)
+                myRectTransform.localPosition -= new Vector3(900, 0, 0);
+            else if (overflowDirection == Vector2.left)
+                myRectTransform.localPosition += new Vector3(900, 0, 0);
+            else
+                Debug.LogError("INVALID STATE IN KickTokenToTheOtherSide");
         }
 
-        Vector2 overflowDirection = GridManager.Instance.GetOverflowDirection(rectTransform.localPosition);
-        if (overflowDirection != Vector2.zero)
+        // TO DO: solve magic numbers
+        private void PlayDwindleAnimation(Vector2 initialAnimDir, Vector3 positionAfterAnimation, float magnitude = 10f, float duration = 0.2f)
         {
-            if ((isSpecialDebugEnabled))
-            {
-                Debug.LogError("OverflowDirection " + overflowDirection);
-            }
-            //Debug.LogError("gridPositionIndex " + gridPositionIndex);
-            HandleTokenOverflow(overflowDirection);
+            Vector3 initialPos = myRectTransform.localPosition;
+
+            // Define the dwindle sequence
+            Sequence dwindleSequence = DOTween.Sequence();
+
+            dwindleSequence.Append(myRectTransform.DOAnchorPos(initialPos + (Vector3)(initialAnimDir * magnitude), duration).SetEase(Ease.OutQuad))
+                           .Append(myRectTransform.DOAnchorPos(initialPos - (Vector3)(initialAnimDir * magnitude * 0.5f), duration * 0.75f).SetEase(Ease.OutQuad))
+                           .Append(myRectTransform.DOAnchorPos(initialPos + (Vector3)(initialAnimDir * magnitude * 0.3f), duration * 0.5f).SetEase(Ease.OutQuad))
+                           .Append(myRectTransform.DOAnchorPos(initialPos - (Vector3)(initialAnimDir * magnitude * 0.2f), duration * 0.4f).SetEase(Ease.OutQuad))
+                           .Append(myRectTransform.DOAnchorPos(initialPos, duration * 0.3f).SetEase(Ease.OutQuad))
+                           .OnComplete(() => myRectTransform.localPosition = positionAfterAnimation);
         }
-    }
 
-    public void UpdateLocalPosition(Vector3 deltaLocalPosition)
-    {
-        //Debug.LogError("deltaLocalPosition " + deltaLocalPosition);
-        rectTransform.localPosition += deltaLocalPosition;
-    }
-
-    public void PlayDwindleAnimation(Vector2 dir, Vector3 targetPosition, float magnitude = 10f, float duration = 0.2f)
-    {
-        RectTransform rectTransform = GetComponent<RectTransform>();
-        Vector3 originalPosition = rectTransform.localPosition;
-
-        // Define the dwindle sequence
-        Sequence dwindleSequence = DOTween.Sequence();
-
-        dwindleSequence.Append(rectTransform.DOAnchorPos(originalPosition + (Vector3)(dir * magnitude), duration).SetEase(Ease.OutQuad))
-                       .Append(rectTransform.DOAnchorPos(originalPosition - (Vector3)(dir * magnitude * 0.5f), duration * 0.75f).SetEase(Ease.OutQuad))
-                       .Append(rectTransform.DOAnchorPos(originalPosition + (Vector3)(dir * magnitude * 0.3f), duration * 0.5f).SetEase(Ease.OutQuad))
-                       .Append(rectTransform.DOAnchorPos(originalPosition - (Vector3)(dir * magnitude * 0.2f), duration * 0.4f).SetEase(Ease.OutQuad))
-                       .Append(rectTransform.DOAnchorPos(originalPosition, duration * 0.3f).SetEase(Ease.OutQuad))
-                       .OnComplete(() => rectTransform.localPosition = targetPosition);
-    }
-
-    private void HandleTokenOverflow(Vector2 overflowDirection)
-    {
-      //  Debug.LogError("overflowDirection " + overflowDirection);
-        //Debug.LogError("rectTransform.localPosition before " + rectTransform.localPosition); 
-        if (overflowDirection == Vector2.up)
-            rectTransform.localPosition -= new Vector3(0, 900, 0);
-        else if (overflowDirection == Vector2.down)
-            rectTransform.localPosition += new Vector3(0, 900, 0);
-        else if (overflowDirection == Vector2.right)
-            rectTransform.localPosition -= new Vector3(900, 0, 0);
-        else if (overflowDirection == Vector2.left)
-            rectTransform.localPosition += new Vector3(900, 0, 0);
-
-       // Debug.LogError("rectTransform.localPosition after " + rectTransform.localPosition);
-    }
-
-    public void OnEndDrag(PointerEventData eventData)
-    {
-        if (!GridManager.Instance.IsDraggingEnabled)
-            return;
-
-        //Debug.LogError("ON END DRAG");
-
-        Vector3 dragEndPosition = rectTransform.localPosition;
-        Vector3 dragDelta = dragEndPosition - dragStartPosition;
-
-        StartCoroutine(SnapToGrid());
-        GridManager.Instance.HandleDragEnd();
-    }
-
-    private Vector2 GetDominantDirection(Vector3 delta)
-    {
-        if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y))
+        private void SmoothSnap(Vector2 snapTargetPosition, float snapDuration = 0.3f)
         {
-            return canDragHorizontal ? new Vector2(Mathf.Sign(delta.x), 0) : Vector2.zero;
+            RectTransform parentRect = myRectTransform.parent.GetComponent<RectTransform>();
+            Vector2 localSnapTargetPosition = parentRect.InverseTransformPoint(snapTargetPosition);
+            snapDirection = (localSnapTargetPosition - (Vector2)myRectTransform.localPosition).normalized;
+            // Use DoTween for smooth snapping with easing
+            myRectTransform.DOLocalMove(localSnapTargetPosition, snapDuration)
+                         .SetEase(Ease.InCubic) // Non-linear easing: slow start, fast finish
+                         .OnComplete(() =>
+                         {
+                             myRectTransform.localPosition = localSnapTargetPosition;
+                             initialPosition = localSnapTargetPosition;
+                             PlayDwindleAnimation(snapDirection, positionAfterAnimation:localSnapTargetPosition);
+                         });
         }
-        else
-        {
-            return canDragVertical ? new Vector2(0, Mathf.Sign(delta.y)) : Vector2.zero;
-        }
-    }
-
-    public IEnumerator SnapToGrid(float delay = 0f)
-    {
-        yield return new WaitForSeconds(delay);
-        Vector3 nearestPosition = GridManager.Instance.GetNearestGridPosition(rectTransform.position);
-        SmoothSnap(nearestPosition);
-    }
-
-    private Vector3 snapDirection;
-    private void SmoothSnap(Vector3 targetPosition, float snapDuration = 0.3f)
-    {
-        RectTransform parentRect = rectTransform.parent.GetComponent<RectTransform>();
-        Vector3 localTargetPosition = parentRect.InverseTransformPoint(targetPosition);
-        snapDirection = localTargetPosition - rectTransform.localPosition;
-        // Use DoTween for smooth snapping with easing
-        rectTransform.DOLocalMove(localTargetPosition, snapDuration)
-                     .SetEase(Ease.InCubic) // Non-linear easing: slow start, fast finish
-                     .OnComplete(() =>
-                     {
-                         rectTransform.localPosition = localTargetPosition;
-                         initialPosition = localTargetPosition;
-                         HandleOnSnapComplete(snapDirection, localTargetPosition);
-                     });
-    }
-
-    private void HandleOnSnapComplete(Vector3 snapDirection, Vector3 targetPosition)
-    {
-        PlayDwindleAnimation(snapDirection.normalized, targetPosition);
     }
 }
