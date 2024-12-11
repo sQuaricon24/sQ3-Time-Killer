@@ -918,7 +918,7 @@ MonoBehaviour:
   backgroundImageDark: {fileID: 1117721440}
   backgroundImageLight: {fileID: 1876863975}
   adventureModeCenterImage: {fileID: 103192965}
-  classicModeCenterImage: {fileID: 0}
+  classicModeCenterCircles: {fileID: 2008203533}
   skinColors:
   - {r: 1, g: 0, b: 0, a: 1}
   - {r: 1, g: 0.98563135, b: 0, a: 1}
@@ -6336,7 +6336,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &921670729
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6360,7 +6360,7 @@ RectTransform:
   m_AnchorMin: {x: 0.1, y: 0.291}
   m_AnchorMax: {x: 0.9, y: 0.734}
   m_AnchoredPosition: {x: 0, y: -3}
-  m_SizeDelta: {x: -31.919764, y: -14}
+  m_SizeDelta: {x: 0, y: -14}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &921670730
 MonoBehaviour:
