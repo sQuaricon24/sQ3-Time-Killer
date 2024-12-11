@@ -9,7 +9,7 @@ public class SquariconGlobalEvents : MonoBehaviour
 
     public static Action OnResetAllHints = null;
 
-    public static Action OnMainHint = null;
+    public static Action<bool> OnMainHint = null;
 
     public static Action OnInitializationHint = null;
 

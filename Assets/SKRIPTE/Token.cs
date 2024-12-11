@@ -69,14 +69,16 @@ public class Token : MonoBehaviour
     private void Awake()
     {
         targetTransform = image.GetComponent<RectTransform>();
-        if (SoSetting.Instance.IsAdventureMode)
+        SetImageSize(targetTransform, 50f);
+
+        /*if (SoSetting.Instance.IsAdventureMode)
         {
             SetImageSize(targetTransform, 50f);
         }
         else
         {
             SetImageSize(targetTransform, 0f);
-        }
+        }*/
     }
 
     private void OnEnable()

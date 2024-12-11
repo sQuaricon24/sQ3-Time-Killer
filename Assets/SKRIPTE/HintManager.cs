@@ -95,11 +95,11 @@ public class HintManager : MonoBehaviour
             }
         }
 
-        MainHint();
+        //MainHint();
     }
     
 
-    private void MainHint()
+    private void MainHint(bool justCheckIfLevelDone = false)
     {
         HintDirection hintDirection = HintDirection.UpSwipe;
         foreach (KeyValuePair<int[], HintDirection> item in hintDirections)
@@ -160,7 +160,16 @@ public class HintManager : MonoBehaviour
                 isLevelDone = true;
                 break;
         }
-        if (!SoSetting.Instance.showHints) ResetAllHints();
+
+        if (justCheckIfLevelDone)
+            ResetAllHints();
+        else
+        {
+            // showing hint resets good move streak
+            SoSetting.Instance.goodMoveStreak = 0;
+        }
+
+        //if (!SoSetting.Instance.showHints) ResetAllHints();
 
     }
 

@@ -36,6 +36,7 @@ public class GameplayUIManager : MonoBehaviour
     [SerializeField] private Image backgroundImageDark;
     [SerializeField] private Image backgroundImageLight;
     [SerializeField] private Image adventureModeCenterImage;
+    [SerializeField] private GameObject classicModeCenterCircles;
 
     [SerializeField] private Color[] skinColors;
     [SerializeField] private TextMeshProUGUI textToColorSkin;
@@ -55,17 +56,18 @@ public class GameplayUIManager : MonoBehaviour
         xpText.text = settings.xp.ToString();
 
         //backgroundImageAdventureMode.gameObject.SetActive(false);
-        backgroundImageDark.gameObject.SetActive(false);
+        backgroundImageDark.gameObject.SetActive(true);
         backgroundImageLight.gameObject.SetActive(false);
         adventureModeCenterImage.gameObject.SetActive(false);
-
+        classicModeCenterCircles.gameObject.SetActive(false);
+        
         if (settings.IsAdventureMode)
         {
             //backgroundImageAdventureMode.gameObject.SetActive(true);
             adventureModeCenterImage.gameObject.SetActive(true);
         }
         else
-            backgroundImageDark.gameObject.SetActive(true);
+            classicModeCenterCircles.gameObject.SetActive(true);
 
         btnLevelDone[0].onClick.AddListener(HandleBtnNextLevelClick);
         btnLevelDone[1].onClick.AddListener(HandleBtnMainMenuClick);
@@ -165,6 +167,12 @@ public class GameplayUIManager : MonoBehaviour
         levelDoneGO.SetActive(true);
         btnLevelDone[0].gameObject.SetActive(true);
         btnLevelDone[1].gameObject.SetActive(true);
+
+        if(settings.level < 4)
+        {
+            bool justCheckIfLevelDone = false;
+            SquariconGlobalEvents.OnMainHint?.Invoke(justCheckIfLevelDone);
+        }
     }
 
     private void HandleBtnNextLevelClick()
@@ -180,7 +188,8 @@ public class GameplayUIManager : MonoBehaviour
     private void HandleBtnHintClick()
     {
         settings.showHints = !settings.showHints;
-        SquariconGlobalEvents.OnMainHint?.Invoke();
+        bool justCheckIfLevelDone = false;
+        SquariconGlobalEvents.OnMainHint?.Invoke(justCheckIfLevelDone);
     }
 
     private void LoadCurrentSkin()
@@ -196,7 +205,7 @@ public class GameplayUIManager : MonoBehaviour
                 didLoadTokenSpritesForAdventureMode = true;
             }
             else
-            {
+            {               
                 return;
             }
         }

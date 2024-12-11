@@ -87,7 +87,7 @@ public class Tile : MonoBehaviour, IBeginDragHandler, IDragHandler, IPointerClic
     private void Awake()
     {
         gm = GameManager.Instance;
-        if(SoSetting.Instance.IsAdventureMode)
+        //if(SoSetting.Instance.IsAdventureMode)
         {
             Color c = image.color;
             c.a = 0;

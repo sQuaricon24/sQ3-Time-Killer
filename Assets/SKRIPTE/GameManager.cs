@@ -186,6 +186,7 @@ public partial class GameManager : MonoBehaviour
         if (isDragActive)
             return;
 
+        SoSetting.Instance.goodMoveStreak = 0;
         if (PreviousPositionIndex != CurrentPositionIndex)
         {
             if (doAnimateUndoRedo)
@@ -207,11 +208,15 @@ public partial class GameManager : MonoBehaviour
 
                 UpdateBoardToCurrentPosition();
                 SquariconGlobalEvents.OnResetAllHints?.Invoke();
-                SquariconGlobalEvents.OnMainHint?.Invoke();
+                //bool justCheckIfLevelDone = false;
+                //SquariconGlobalEvents.OnMainHint?.Invoke(justCheckIfLevelDone);
             }
 
             redoBtn.gameObject.SetActive(true);
             undoBtn.gameObject.SetActive(false);
+
+            // not sure if undo triggers good move so reseting it here to 0 again
+            SoSetting.Instance.goodMoveStreak = 0;
         }
         else
         {
@@ -226,6 +231,7 @@ public partial class GameManager : MonoBehaviour
         if (isDragActive)
             return;
 
+        SoSetting.Instance.goodMoveStreak = 0;
         if (PreviousPositionIndex != CurrentPositionIndex)
         {
             // Update the tokens and moves based on the restored current position
@@ -248,12 +254,15 @@ public partial class GameManager : MonoBehaviour
 
                 UpdateBoardToCurrentPosition();
                 SquariconGlobalEvents.OnResetAllHints?.Invoke();
-                SquariconGlobalEvents.OnMainHint?.Invoke();
+               //bool justCheckIfLevelDone = false;
+                //SquariconGlobalEvents.OnMainHint?.Invoke(justCheckIfLevelDone);
             }
             Debug.Log("Redo successful. Current position: " + currentPositionIndex);
 
             redoBtn.gameObject.SetActive(false);
             undoBtn.gameObject.SetActive(true);
+            // not sure if redo triggers good move so reseting it here to 0 again
+            SoSetting.Instance.goodMoveStreak = 0;
         }
         else
         {
@@ -727,6 +736,9 @@ public partial class GameManager : MonoBehaviour
         }
 
         isDragActive = false;
-        SquariconGlobalEvents.OnMainHint?.Invoke();
+
+        // due to extremely bad design and coupling we need to use Hint logic do determine if level is done and trigger level completion proces
+        bool justCheckIfLevelDone = true;
+        SquariconGlobalEvents.OnMainHint?.Invoke(justCheckIfLevelDone);
     }
 }
